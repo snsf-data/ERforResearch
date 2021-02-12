@@ -1,0 +1,19 @@
+Package: ERforResearch
+Type: Package
+Title: Expected Rank for Research Evaluation
+Version: 0.1.0.9006
+Authors@R: 
+    c(person(given = "Rachel",
+             family = "Heyard",
+             role = c("aut", "cre"),
+             email = "rachel.heyard@snf.ch"))
+Description: Implementation of the functionalities to use the expected ranks in the context of research evaluation.
+Encoding: UTF-8
+Imports: bayesplot, ggridges, stringr, ggrepel
+Depends: rjags, here, tidyverse
+LazyData: true
+RoxygenNote: 7.1.1
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+License: MIT + file LICENSE

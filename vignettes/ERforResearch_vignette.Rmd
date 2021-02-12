@@ -1,0 +1,205 @@
+---
+title: "Demo ERforResearch"
+author: "R. Heyard"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Demo ERforResearch}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(dplyr.summarise.inform = FALSE)
+
+library(ERforResearch)
+library(tidyverse)
+```
+
+The complex methodology of the ER is rather straightforward to use, even without knowledge in building Bayesian hierarchical models. First, for illustration, we will load a mock data set in `R`. The function `get_mock_data()` does exactly that. 
+
+```{r load-data}
+
+# Load the mock data
+data <- get_mock_data()
+```
+
+The dataset comprises `r data %>% pull(panel) %>% unique() %>% length()` different panels, with `r data %>% filter(panel == "p1") %>% pull(voter) %>% unique() %>% length()` voter and `r data %>% filter(panel == "p1") %>% pull(application) %>% unique() %>% length()` proposals each. Every one of these voters gives a score to each of the proposals. For the first illustrations, we will only use one panel (`p1`).
+
+```{r load-data2}
+
+data_panel1 <- data %>% 
+  filter(panel == "p1")
+```
+
+The aim of this package is to be able to rank the proposals in a certain call or panel. The most straightforward way to do this, is to use the average of the scores a proposal received from all the voters:
+```{r}
+# First ranking based on simple means: 
+data_panel1 %>% 
+  group_by(application) %>% 
+  summarise(avg = mean(num_grade)) %>% 
+  arrange(-avg)
+```
+
+Let us assume, we had funding to accept five proposals in panel 1. In this case, we would accept and fund the proposals \#1-5, with average scores ranging from 5 to 4.4. The methodology in the `ERforResearch` package allows us to incorporate the information on the voters behavior (are they more or less strict in giving grades to proposals?). Additionally to that, the Bayesian hierarchical models (BHM) can incorporate random variation in the grading of the proposals, for example, due to conflict of interests or other one proposal is not grades by every voter, \dots (Note that here no voter had a COI). This happens very regularly in the grant peer review process. For this reason we will use a JAGS model via the `rjags` package to build such a flexible model.
+The `ERforResearch` package includes a function to call a default JAGS BHM model:
+
+```{r}
+ERforResearch::get_default_jags_model
+```
+
+Then, we have the possibility to simply use that default model and sample from it using the `get_mcmc_samples()` function. 
+
+
+```{r,  fig.align="center", fig.width=7, fig.height=5, fig.cap="Traceplots of the proposal effects."}
+# Estimate theta's 
+
+mcmc_samples_object <- 
+  get_mcmc_samples(
+    data = data_panel1, id_application = "application", id_voter = "voter",
+    grade_variable = "num_grade",
+    path_to_jags_model = NULL, 
+          # NULL means we use the default model
+    n_chains = 3, n_iter = 5000, n_burnin = 1000, 
+    seed = 6, dont_bind = TRUE)
+
+# With the latter object we can do some convergence diagnostics, as for example
+# gelman.diag(mcmc_samples_object)
+# and
+bayesplot::mcmc_trace(mcmc_samples_object,
+                      pars = paste0("application_intercept[", 1:15, "]"))
+
+# If the model in path_to_jags_model is different from the default model with
+# different names for the specific parameters, this has to be declared in the 
+# arguments (theta_name, tau_name, sigma_name, tau_voter_name, rank_theta_name,
+# other_variables).
+
+# For the further analyis we will simply use all three chains
+# and therefore bind them here.
+mcmc_samples <- mcmc(do.call(rbind, mcmc_samples_object))
+```
+
+We do not have to separately sample from the model, as the functions that follow can easily call the `get_mcmc_samples()` themselves. If the same seed is given to the `seed` argument in the respective functions the results are reproducible. 
+
+Then, we use the `plot_rankogram()` function to plot the _Rankograms_ of each proposal, which are the probabilities of each rank plotted against all possible ranks.
+```{r produce-rankogram, fig.align="center", fig.width=7, fig.height=5, fig.cap="Rankogram for the proposals on the first panel."}
+plot_rankogram(data = data_panel1,
+               id_application = "application",
+               id_voter = "voter",
+               grade_variable = "num_grade",
+               mcmc_samples = mcmc_samples
+                  # if NULL the `get_mcmc_samples function is called from within
+)
+```
+
+Next, we can use the same function with the parameter `cumulative_rank_prob` set to TRUE in order to plot the cumulative ranking probabilities against the possible ranks.
+```{r produce-cumulative-ranking-probabilities, fig.align="center", fig.cap="Cumulative ranking probability plots for competing proposals in the first panel.",fig.height=5, fig.width=7}
+plot_rankogram(data = data_panel1,
+               id_application = "application",
+               id_voter = "voter",
+               grade_variable = "num_grade",
+               cumulative_rank_prob = TRUE,
+               mcmc_samples = mcmc_samples)
+```
+
+The SUCRA is the area under the cumulative ranking probability plot. The higher the SUCRA value, the
+higher the likelihood of a proposal being in the top rank or one of the top ranks.
+```{r}
+SUCRA_results <- get_sucra(data = data_panel1,
+                           id_application = "application",
+                           id_voter = "voter",
+                           grade_variable = "num_grade",
+                           mcmc_samples = mcmc_samples)
+SUCRA_results %>% round(2)
+```
+
+Finally we will compute the expected ranks (ER), which can directly be linked to the SUCRA. The lower the ER the better the evaluation of the proposal. The best possible ER is 1 for rank 1. 
+```{r}
+
+ER_results <- get_er_from_jags(data = data_panel1,
+                               id_application = "application",
+                               id_voter = "voter",
+                               grade_variable = "num_grade",
+                               mcmc_samples = mcmc_samples)
+
+ER_results$rankings %>% 
+  mutate_if(is.numeric, function(x) round(x, 2)) %>% 
+  arrange(er)
+```
+
+The latter, can also be plotted using the `plotting_er_results` function. As can be seen in the figure, the five best proposals are still the same, but the ordering of all proposals changed. The ER actually does a comparative ranking, by comparing every proposal to every other proposal. 
+```{r er-plot, fig.align="center", fig.cap="All proposals from the first mock panel ranked using the average grade (Fixed), the posterior means (Posterior Mean) and the expected rank (ER).",fig.height=5, fig.width=7}
+
+plotting_er_results(ER_results, title = "Panel 1", how_many_fundable = 5,
+                    draw_funding_line = FALSE)
+```
+
+
+To better see, whether the funding line (FL) (here: between the fifth and the sixth proposal) goes through a cluster, we use the posterior distribution of the ER. The ERs of the competing proposals are plotted together with their 50% credible intervals (CrI). A provisional FL is defined at the ER of the last fundable (here the fifth) proposal. The proposals with a 50% CrI not crossing the FL are directly accecpted or rejected, depending whether their ER is lower or higher than the FL. The proposals with a 50% CrI crossing the FL will constitute the random selection group. In the case of panel 1 of the mock data four proposals will be randomly selected from a group of five. 
+```{r clustered-er-plot, fig.align="center", fig.cap="All proposals from the first mock panel ranked by their ER together with their 50% credible intervals (inner band) and 90% credible intervals (outer band).",fig.height=5, fig.width=7}
+
+plot_er_distributions(mcmc_samples, 
+                      n_proposals = data_panel1 %>%
+                        summarise(n = n_distinct(application)) %>% pull(), 
+                      number_fundable = 5)
+
+```
+
+
+
+The flexibility of the method of the ER allows us to not only look at the panels individually but also rank all the proposals from the three panels in one large ranking. To do this, we cannot use the default model but have to rewrite it a bit. A .txt version of the following model definition has to be saved:
+```{r, echo = FALSE}
+writeLines(model_with_sections <- 
+    "model{
+      # Likelihood:
+      for (i in 1:n) { # i is not the application but the review
+          grade[i] ~ dnorm(mu[i], inv_sigma2)
+                # inv_sigma2 is precision (1 / variance)
+          mu[i] <- overall_mean + application_intercept[num_application[i]] +
+          voter_intercept[num_voter[i]] + section_intercept[num_section[i]]
+      }
+      # Ranks:
+      rank_theta[1:n_application] <- rank(-application_intercept[])
+      # Priors:
+      for (j in 1:n_application){
+        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      }
+      for (l in 1:n_voters){
+        voter_intercept[l] ~ dnorm(nu[l], inv_tau_voter2)
+      }
+      for (l in 1:n_voters){
+        nu[l] ~ dnorm(0, 100) # 1/(0.1^2) = 100
+      }
+      for (l in 1:n_section){
+        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      }
+      sigma ~ dunif(0.000001, 2)
+      inv_sigma2 <- pow(sigma, -2)
+      inv_tau_application2 <- pow(tau_application, -2)
+      tau_application ~ dunif(0.000001, 2)
+      inv_tau_voter2 <- pow(tau_voter, -2)
+      tau_voter ~ dunif(0.000001, 2)
+      inv_tau_section2 <- pow(tau_section, -2)
+      tau_section ~ dunif(0.000001, 2)
+    }")
+cat(model_with_sections,
+    file = here("jags_model_with_sections.txt"))
+```
+
+Then we use the latter model to directly plot the ER:
+```{r er-plot-all, fig.align="center", fig.cap="The proposals from all mock panels ranked using the average grade (Fixed), the posterior means (Posterior Mean) and the expected rank (ER).",fig.height=5, fig.width=7}
+
+ER_results_all <- get_er_from_jags(data = data,
+                                   id_application = "application",
+                                   id_voter = "voter",
+                                   id_section = "panel",
+                                   grade_variable = "num_grade",
+                                   path_to_jags_model = 
+                                     here("jags_model_with_sections.txt"),
+                                   tau_section_name = "tau_section",
+                                   n_chains = 3, n_iter = 5000,
+                                   n_burnin = 1000)
+
+plotting_er_results(ER_results_all, title = "All three panels",
+                    draw_funding_line = FALSE, how_many_fundable = 15)  
+```
