@@ -44,6 +44,8 @@
 #' @param hjust_y_axis ...
 #' @return the result is a plot
 #' @import ggrepel
+#' @import tidyr
+#' @import ggplot2
 #' @examples
 #' dat <- get_mock_data() %>%
 #' filter(panel == "p1")

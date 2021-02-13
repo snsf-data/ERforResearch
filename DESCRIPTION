@@ -9,8 +9,8 @@ Authors@R:
              email = "rachel.heyard@snf.ch"))
 Description: Implementation of the functionalities to use the expected ranks in the context of research evaluation.
 Encoding: UTF-8
-Imports: bayesplot, ggridges, stringr, ggrepel, dplyr
-Depends: rjags, here, tidyverse
+Imports: bayesplot, ggridges, stringr, ggrepel
+Depends: rjags, here, dplyr, tidyr, ggplot2
 LazyData: true
 RoxygenNote: 7.1.1
 Suggests: 
