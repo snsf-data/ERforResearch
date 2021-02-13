@@ -91,6 +91,7 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #' @param dont_bind if TRUE the different chains are not pooled, and the MCMC
 #' object is returned as it is.
 #' @import rjags
+#' @importFrom dplyr filter
 #' @return matrix with the samples for all parameters defined in the model.
 #' @export
 #' @examples

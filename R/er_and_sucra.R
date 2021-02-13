@@ -44,6 +44,7 @@
 #' @param quiet if the default model is used this function generates a warning.
 #' if quiet = TRUE, this warning is not shown
 #' @import rjags
+#' @import tidyverse
 #' @return the result is a list with the 1) ranked applications with their
 #' expected rank and pcer, 2) the rankability and 3) the estimates of the
 #' variances.

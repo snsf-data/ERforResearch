@@ -241,6 +241,7 @@ plotting_er_with_var <- function(er_results, id_application = "id_application",
 #' represented instead
 #' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
 #' @import rjags
+#' @importFrom utils head
 #' @return the result is a plot of the rankogram (or cumulative ranking
 #' probabilities)
 #' @export
@@ -355,6 +356,7 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' @return the result is a plot of the posterior distributions of the average
 #' voter behaviors.
 #' @import ggridges
+#' @importFrom stats median
 #' @export
 voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
                                         name_mean = "nu",
@@ -377,7 +379,7 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
     ungroup() %>%
     arrange(median)
   voter_behavior_sample_for_plot %>%
-    mutate(Referee = factor(Referee, level = voter_behavior_sample_for_plot %>%
+    mutate(Referee = factor(Referee, levels = voter_behavior_sample_for_plot %>%
                               select(Referee, median) %>%
                               distinct() %>%
                               pull(Referee))) %>%
