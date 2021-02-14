@@ -79,7 +79,9 @@ This function computes the SUCRA
 \examples{
 data_panel1 <- get_mock_data() \%>\%
          filter(panel == "p1")
+\dontrun{
 SUCRA_results <- get_sucra(data = data_panel1,
                            id_application = "application",
                            id_voter = "voter", grade_variable = "num_grade")
+                           }
 }

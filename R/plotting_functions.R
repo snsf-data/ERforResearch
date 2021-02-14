@@ -49,6 +49,7 @@
 #' @examples
 #' dat <- get_mock_data() %>%
 #' filter(panel == "p1")
+#' \dontrun{
 #' ER_results <- get_er_from_jags(data = dat,
 #'                   id_application = "application",
 #'                   id_voter = "voter",
@@ -56,7 +57,7 @@
 #'                   n_chains = 2, n_iter = 1000,
 #'                   n_burnin = 1000)
 #' plotting_er_results(ER_results, title = "Panel 1", how_many_fundable = 5)
-#'
+#' }
 #' @export
 plotting_er_results <- function(er_results, rankability = TRUE,
                                 id_application = "id_application",

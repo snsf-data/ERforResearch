@@ -91,8 +91,10 @@ Helper function to get the mcmc samples
 \examples{
 data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
+\dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
                                  id_application = "application",
                                  id_voter = "voter",
                                  grade_variable = "num_grade")
+                                 }
 }

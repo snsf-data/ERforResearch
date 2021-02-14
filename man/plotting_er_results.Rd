@@ -110,6 +110,7 @@ This function plot the results form the JAGS-ER
 \examples{
 dat <- get_mock_data() \%>\%
 filter(panel == "p1")
+\dontrun{
 ER_results <- get_er_from_jags(data = dat,
                   id_application = "application",
                   id_voter = "voter",
@@ -117,5 +118,5 @@ ER_results <- get_er_from_jags(data = dat,
                   n_chains = 2, n_iter = 1000,
                   n_burnin = 1000)
 plotting_er_results(ER_results, title = "Panel 1", how_many_fundable = 5)
-
+}
 }

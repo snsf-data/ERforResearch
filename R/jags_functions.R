@@ -17,7 +17,9 @@ options(dplyr.summarise.inform = FALSE)
 #' write their own model definition if more flexibility is needed.
 #' @examples
 #' # The model definition .txt is stored in the file "default_jags_model.txt"
+#' \dontrun{
 #' get_default_jags_model()
+#' }
 #' @export
 get_default_jags_model <- function(path = "default_jags_model.txt") {
   cat("model{
@@ -99,11 +101,12 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
 #'      filter(panel == "p1")
+#' \dontrun{
 #' mcmc_samples <- get_mcmc_samples(data = data_panel1,
 #'                                  id_application = "application",
 #'                                  id_voter = "voter",
 #'                                  grade_variable = "num_grade")
-
+#'                                  }
 get_mcmc_samples <- function(data, id_application, id_voter,
                              grade_variable,
                              model = NULL,

@@ -21,5 +21,7 @@ write their own model definition if more flexibility is needed.
 }
 \examples{
 # The model definition .txt is stored in the file "default_jags_model.txt"
+\dontrun{
 get_default_jags_model()
+}
 }

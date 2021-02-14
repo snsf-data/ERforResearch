@@ -52,11 +52,13 @@
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
 #'          filter(panel == "p1")
+#' \dontrun{
 #' ER_results <- get_er_from_jags(data = data_panel1,
 #'                                id_application = "application",
 #'                                id_voter = "voter",
 #'                                grade_variable = "num_grade",
 #'                                path_to_jags_model = NULL)
+#'                                }
 get_er_from_jags <-  function(data, id_application,
                               id_voter = NULL,
                               grade_variable,
@@ -230,9 +232,11 @@ get_er_from_jags <-  function(data, id_application,
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
 #'          filter(panel == "p1")
+#' \dontrun{
 #' SUCRA_results <- get_sucra(data = data_panel1,
 #'                            id_application = "application",
 #'                            id_voter = "voter", grade_variable = "num_grade")
+#'                            }
 #' @export
 get_sucra <- function(data, id_application, id_voter, grade_variable,
                       path_to_jags_model = NULL,

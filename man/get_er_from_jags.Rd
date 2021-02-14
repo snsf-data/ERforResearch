@@ -90,9 +90,11 @@ This function computes the ER via JAGS
 \examples{
 data_panel1 <- get_mock_data() \%>\%
          filter(panel == "p1")
+\dontrun{
 ER_results <- get_er_from_jags(data = data_panel1,
                                id_application = "application",
                                id_voter = "voter",
                                grade_variable = "num_grade",
                                path_to_jags_model = NULL)
+                               }
 }
