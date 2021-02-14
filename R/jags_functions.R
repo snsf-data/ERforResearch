@@ -91,6 +91,8 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #' @param dont_bind if TRUE the different chains are not pooled, and the MCMC
 #' object is returned as it is.
 #' @import rjags
+#' @import coda
+#' @import dplyr
 #' @importFrom dplyr filter
 #' @return matrix with the samples for all parameters defined in the model.
 #' @export
@@ -128,7 +130,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   }
   ## 2) The grade variable has to be numeric.
   if ((data %>%
-       pull(grade_variable) %>%
+       dplyr::pull(grade_variable) %>%
        class()) != "numeric") {
     stop(paste0("The grade_variable has to be numeric. Extensions for ",
                 "non-linear models will be provided at a later stage."))
@@ -180,11 +182,11 @@ get_mcmc_samples <- function(data, id_application, id_voter,
     list(n = nrow(data),
          n_application = length(unique(data$num_application)),
          n_voters = length(unique(data$num_voter)),
-         grade = data %>% pull(get(grade_variable)),
+         grade = data %>% dplyr::pull(get(grade_variable)),
          overall_mean = data %>%
            group_by(num_application) %>%
-           summarise(av = mean(num_grade, na.rm = TRUE)) %>%
-           pull(av) %>%
+           summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
+           dplyr::pull(.data$av) %>%
            mean(),
          num_application = data$num_application,
          num_voter = data$num_voter)

@@ -36,11 +36,11 @@ get_right_data_format <- function(individual_votes, prefix_voter = "voter",
                  values_to = "grade") %>%
     # Make sure all the grades are upper case and convert them to a numeric
     # variable using the function specified in fun_grade_to_num:
-    mutate(grade = str_to_upper(grade),
-           num_grade = fun_grade_to_num(grade))
+    mutate(grade = str_to_upper(.data$grade),
+           num_grade = fun_grade_to_num(.data$grade))
   if (delete_NA) {
     long_data <- long_data %>%
-      filter(!is.na(num_grade))
+      filter(!is.na(.data$num_grade))
   }
   return(long_data)
 }
@@ -60,7 +60,7 @@ get_mock_data <- function(panels = "all"){
                              1,	2, 3,	4, 5, 1, 5,	2, 2,	5, 1,	3, 4,	3, 5,
                              1,	4, 2,	5, 5, 2, 3,	4, 4,	5, 2,	4, 3,	5, 5,
                              2,	5, 4,	4, 6, 2, 3,	4, 6,	6, 2,	5, 5,	4, 6)) %>%
-    mutate(num_grade = 7 - grade,
+    mutate(num_grade = 7 - .data$grade,
            panel = "p1")
 
   panel2 <- tibble(application = rep(paste0("#", 16:30), each = 5),
@@ -70,7 +70,7 @@ get_mock_data <- function(panels = "all"){
                              3,	3, 3,	3, 3, 3, 3,	4, 4,	3, 4,	3, 3,	4, 4,
                              4,	4, 4,	5, 4, 4, 4, 5, 5,	5, 4,	6, 4, 5, 5,
                              6,	5, 5,	5, 5, 5, 5,	5, 6,	6, 5,	6, 6,	6, 6)) %>%
-    mutate(num_grade = 7 - grade,
+    mutate(num_grade = 7 - .data$grade,
            panel = "p2")
 
   panel3 <- tibble(application = rep(paste0("#", 31:45), each = 5),
@@ -80,7 +80,7 @@ get_mock_data <- function(panels = "all"){
                              4, 3, 3,	3, 5, 2, 4,	5, 3,	5, 3, 3, 3,	5, 6,
                              5,	2, 2,	6, 6, 3, 5, 4, 5, 6, 5,	4, 5,	4, 6,
                              4, 6, 5,	5, 6, 6, 4,	6, 5,	6, 5,	6, 6,	5, 6)) %>%
-    mutate(num_grade = 7 - grade,
+    mutate(num_grade = 7 - .data$grade,
            panel = "p3")
 
   all_panels <- panel1 %>%
@@ -91,13 +91,13 @@ get_mock_data <- function(panels = "all"){
     ret <- all_panels
 
   if (panels == "one")
-    ret <- p1
+    ret <- panel1
 
   if (panels == "two")
-    ret <- p2
+    ret <- panel2
 
   if (panels == "three")
-    ret <- p3
+    ret <- panel3
 
   return(ret)
 }

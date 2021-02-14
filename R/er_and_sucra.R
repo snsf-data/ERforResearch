@@ -44,6 +44,7 @@
 #' @param quiet if the default model is used this function generates a warning.
 #' if quiet = TRUE, this warning is not shown
 #' @import rjags
+#' @import dplyr
 #' @return the result is a list with the 1) ranked applications with their
 #' expected rank and pcer, 2) the rankability and 3) the estimates of the
 #' variances.
@@ -81,7 +82,7 @@ get_er_from_jags <-  function(data, id_application,
   }
   ## 2) The grade_variable has to be numeric:
   if ((data %>%
-       pull(grade_variable) %>%
+       dplyr::pull(grade_variable) %>%
        class()) != "numeric") {
     stop(paste0("The grade_variable has to be numeric. Extensions for ",
                 "non-linear models will be provided at a later stage."))
@@ -96,13 +97,14 @@ get_er_from_jags <-  function(data, id_application,
 
   # Number of applications and overall mean:
   n_application <- data %>%
-    pull(get(id_application)) %>%
+    dplyr::pull(get(id_application)) %>%
     unique() %>%
     length()
   overall_mean <- data %>%
     group_by(get(id_application)) %>%
-    summarise(av = mean(num_grade, na.rm = TRUE)) %>%
-    pull(av) %>%
+    mutate(num_grade = get(grade_variable)) %>%
+    summarise(av = mean(.data$num_grade, na.rm = TRUE)) %>%
+    dplyr::pull(.data$av) %>%
     mean()
 
   # If not MCMC samples are provided, they are computed here:
@@ -143,26 +145,28 @@ get_er_from_jags <-  function(data, id_application,
   # The results matrix
   results_rank_posterior_mean <-
     tibble(id_application = data %>%
-             pull(get(id_application)) %>%
+             dplyr::pull(get(id_application)) %>%
              unique(),
            # The posterior means of the thetas
            pm = colMeans(mcmc_samples_thetas)) %>%
-    mutate(rank_pm = rank(-(overall_mean + pm))) # Rank based on the pm
+    mutate(rank_pm = rank(-(overall_mean + .data$pm))) # Rank based on the pm
   results_rank_posterior_mean$er <- ers # Adding the er to results matrix
 
   rankings_all <- data %>%
+    mutate(num_grade = get(grade_variable)) %>%
     group_by(!!as.name(id_application)) %>%
     # Computation of the average grade
-    summarise(avg_grade = mean(num_grade, na.rm = TRUE)) %>%
-    mutate(rank = rank(-avg_grade), # Rank based on the average grade
+    summarise(avg_grade = mean(.data$num_grade, na.rm = TRUE)) %>%
+    mutate(rank = rank(-.data$avg_grade), # Rank based on the average grade
            # `Rename` the application variable
            id_application = get(id_application)) %>%
     left_join(results_rank_posterior_mean,
               # Joining the posterior mean and ER results
               by = "id_application") %>%
     # Computation of the percentiles based on ER
-    mutate(pcer = 100 * (er - 0.5) / n_application) %>%
-    select(id_application, rank, rank_pm, er, avg_grade, pcer)
+    mutate(pcer = 100 * (.data$er - 0.5) / n_application) %>%
+    select(.data$id_application, .data$rank, .data$rank_pm, .data$er,
+           .data$avg_grade, .data$pcer)
 
   # Variance of the application effects
   tau2 <-
@@ -252,7 +256,7 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
   }
   ## 2) The grade_variable has to be numeric:
   if ((data %>%
-       pull(grade_variable) %>%
+       dplyr::pull(grade_variable) %>%
        class()) != "numeric") {
     stop(paste0("The grade_variable has to be numeric. Extensions for ",
                 "non-linear models will be provided at a later stage."))
@@ -267,13 +271,13 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
 
   # Number of applications and overall mean:
   n_application <- data %>%
-    pull(get(id_application)) %>%
+    dplyr::pull(get(id_application)) %>%
     unique() %>%
     length()
   overall_mean <- data %>%
     group_by(get(id_application)) %>%
-    summarise(av = mean(num_grade, na.rm = TRUE)) %>%
-    pull(av) %>%
+    summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
+    dplyr::pull(.data$av) %>%
     mean()
 
   # If not MCMC samples are provided, they are computed here:
@@ -311,7 +315,7 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
 
   # Add the names of the applications as names of the sucra-vector
   names(sucra) <- data %>%
-    pull(get(id_application)) %>%
+    dplyr::pull(get(id_application)) %>%
     unique()
 
   return(sucra)

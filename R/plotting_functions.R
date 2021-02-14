@@ -95,42 +95,44 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 
   if (!is.null(how_many_fundable)){
     dat_for_plot <- er_results$rankings %>%
-      arrange(er) %>%
+      arrange(.data$er) %>%
       mutate(funded = c(rep("Funded", how_many_fundable),
                         rep("Rejected", n() - how_many_fundable))) %>%
       mutate(numbering = 1:n())
   } else dat_for_plot <- er_results$rankings %>%
-      arrange(er) %>%
+      arrange(.data$er) %>%
       mutate(numbering = 1:n())
 
   dat_for_plot <- dat_for_plot %>%
     gather("rank", "rank_pm", "er",
-           key = which_rank, value = rank) %>%
-    mutate(which_rank = case_when(which_rank == "rank" ~ "Fixed",
-                                  which_rank == "rank_pm" ~
+           key = "which_rank", value = "rank") %>%
+    mutate(which_rank = case_when(.data$which_rank == "rank" ~ "Fixed",
+                                  .data$which_rank == "rank_pm" ~
                                     "Posterior Mean",
-                                  which_rank == "er" ~ "ER"),
-           which_rank = factor(which_rank,
+                                  .data$which_rank == "er" ~ "ER"),
+           which_rank = factor(.data$which_rank,
                                levels = c("Fixed",
                                           "Posterior Mean", "ER"))) %>%
     rename(application_number = eval(id_application))
 
   start_plot <- dat_for_plot %>%
-    ggplot(aes(x = which_rank, y = rank, group = application_number))
+    ggplot(aes(x = .data$which_rank, y = .data$rank,
+               group = .data$application_number))
 
   if (!is.null(how_many_fundable)) {
     start_plot <- dat_for_plot %>%
-      ggplot(aes(x = which_rank, y = rank, group = application_number,
-                 color = funded))
+      ggplot(aes(x = .data$which_rank, y = .data$rank,
+                 group = .data$application_number, color = .data$funded))
   }
 
   if (result_show) {
     start_plot <- start_plot +
-      geom_text_repel(aes(label = ifelse(which_rank == "ER" & !easy_numbering,
-                                         application_number,
-                                         ifelse(which_rank == "ER" &
+      geom_text_repel(aes(label = ifelse(.data$which_rank == "ER" &
+                                           !easy_numbering,
+                                         .data$application_number,
+                                         ifelse(.data$which_rank == "ER" &
                                                   easy_numbering,
-                                                numbering, ""))),
+                                                .data$numbering, ""))),
                       size = grep_size, nudge_x = nudge_x,
                       direction = "y", show.legend = FALSE,
                       min.segment.length = min_segment_length,
@@ -187,37 +189,6 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 }
 
 
-#' The Plot of the Expected Rank with their confidence intervals
-#'
-#' The ER of each application are presented together with their 95% Wald CI
-#' @param er_results the resulting object from the `get_er_from_jags()` function
-#' @param id_application name of the identifier of the application
-#' @param alpha alpha level for the CI-bands (default = 0.5)
-#' @param color color of point and bands (default = "black")
-#' @export
-plotting_er_with_var <- function(er_results, id_application = "id_application",
-                                 alpha = .5, color = 1) {
-  dat <- er_results$rankings %>%
-    arrange(er) %>%
-    mutate(lower_bound = er - 1.96 * sqrt(er_var),
-           lower_bound = if_else(lower_bound < 1, 1, lower_bound),
-           upper_bound = er + 1.96 * sqrt(er_var),
-           order = seq_len(nrow(er_results$rankings)))
-
-  dat %>%
-    ggplot(aes(x = order, y = er)) +
-    geom_point(color = color) +
-    geom_segment(aes(x = order, xend = order,
-                     y = lower_bound, yend = upper_bound),
-                 alpha = alpha, color = color) +
-    labs(x = "", y = "Expected Rank") +
-    scale_x_continuous(breaks = dat$order,
-                       labels = dat[, id_application] %>% pull()) +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 90))
-}
-
-
 #' Rankogram
 #'
 #' This function produces a rankogram
@@ -243,6 +214,7 @@ plotting_er_with_var <- function(er_results, id_application = "id_application",
 #' represented instead
 #' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
 #' @import rjags
+#' @import dplyr
 #' @importFrom utils head
 #' @return the result is a plot of the rankogram (or cumulative ranking
 #' probabilities)
@@ -260,14 +232,15 @@ plot_rankogram <- function(data, id_application, id_voter,
                            mcmc_samples = NULL) {
 
   n_application <- data %>%
-    pull(get(id_application)) %>%
+    dplyr::pull(get(id_application)) %>%
     unique() %>%
     length()
 
   overall_mean <- data %>%
+    mutate(num_grade = grade_variable) %>%
     group_by(get(id_application)) %>%
-    summarise(av = mean(num_grade, na.rm = TRUE)) %>%
-    pull(av) %>%
+    summarise(av = mean(.data$num_grade, na.rm = TRUE)) %>%
+    dplyr::pull(.data$av) %>%
     mean()
 
   if (is.null(mcmc_samples)) {
@@ -298,44 +271,44 @@ plot_rankogram <- function(data, id_application, id_voter,
 
   colnames(p_j_b) <- seq_len(ncol(p_j_b))
   rownames(p_j_b) <- data %>%
-    pull(get(id_application)) %>%
+    dplyr::pull(get(id_application)) %>%
     unique()
 
   if (!cumulative_rank_prob) {
     p_j_b %>%
       as_tibble(rownames = "application") %>%
-      gather(rank, prob, paste0(1):paste0(ncol(p_j_b))) %>%
+      gather(rank, .data$prob, paste0(1):paste0(ncol(p_j_b))) %>%
       mutate(rank = as.numeric(rank)) %>%
-      ggplot(aes(x = rank, y = prob)) +
+      ggplot(aes(x = .data$rank, y = .data$prob)) +
       geom_line() +
       labs(x = "Rank", y = "Probability") +
       theme_minimal() +
-      facet_wrap(~ application)
+      facet_wrap(~ .data$application)
   } else {
     sucra <- sapply(seq_len(nrow(p_j_b)), function(i) {
       mean(cumsum(p_j_b[i, -nrow(p_j_b)]))
     })
     names(sucra) <- data %>%
-      pull(get(id_application)) %>%
+      dplyr::pull(get(id_application)) %>%
       unique()
 
     p_j_b %>%
       as_tibble(rownames = "application") %>%
-      gather(rank, prob, paste0(1):paste0(ncol(p_j_b))) %>%
+      gather(rank, .data$prob, paste0(1):paste0(ncol(p_j_b))) %>%
       mutate(rank = as.numeric(rank)) %>%
-      group_by(application) %>%
+      group_by(.data$application) %>%
       arrange(rank) %>%
-      mutate(cum_prob = cumsum(prob),
-             sucra = sucra[head(application, 1)]) %>%
+      mutate(cum_prob = cumsum(.data$prob),
+             sucra = sucra[head(.data$application, 1)]) %>%
       ungroup() %>%
-      ggplot(aes(x = rank, y = cum_prob)) +
+      ggplot(aes(x = .data$rank, y = .data$cum_prob)) +
       geom_line() +
       labs(x = "Rank", y = "Cumulative probability") +
       geom_text(aes(x = n_application - 3, y = .5, label =
                       paste0("SUCRA: ", round(sucra, 2))),
                 size = 2) +
       theme_minimal() +
-      facet_wrap(~ application)
+      facet_wrap(~ .data$application)
   }
 }
 
@@ -366,6 +339,9 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
                                         title = NULL, xlim_min = -1,
                                         xlim_max = 1,
                                         scale = 1.75){
+
+  x <- NULL
+
   voter_behavior_colnames <- paste0(name_mean, "[", seq_len(n_voters), "]")
   voter_behavior_samples <- get_mcmc_samples_result[, voter_behavior_colnames]
 
@@ -376,16 +352,17 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
     as_tibble() %>%
     pivot_longer(cols = starts_with("voter"),
                  names_to = "Referee", values_to = "weight") %>%
-    group_by(Referee) %>%
-    mutate(median = median(weight)) %>%
+    group_by(.data$Referee) %>%
+    mutate(median = median(.data$weight)) %>%
     ungroup() %>%
-    arrange(median)
+    arrange(.data$median)
   voter_behavior_sample_for_plot %>%
-    mutate(Referee = factor(Referee, levels = voter_behavior_sample_for_plot %>%
-                              select(Referee, median) %>%
+    mutate(Referee = factor(.data$Referee,
+                            levels = voter_behavior_sample_for_plot %>%
+                              select(.data$Referee, .data$median) %>%
                               distinct() %>%
-                              pull(Referee))) %>%
-    ggplot(aes(x = weight, y = Referee, fill = stat(x))) +
+                              dplyr::pull(.data$Referee))) %>%
+    ggplot(aes(x = .data$weight, y = .data$Referee, fill = stat(x))) +
     geom_density_ridges_gradient(scale = scale, rel_min_height = 0.02,
                                  show.legend = FALSE,
                                  gradient_lwd = 0) +
@@ -461,55 +438,59 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                                  prob_outer = outer_credible)
 
   order <- mcmc_intervals_data_mat %>%
-    arrange(m) %>%
-    pull(parameter)
+    arrange(.data$m) %>%
+    dplyr::pull(.data$parameter)
 
   if (!er) { # for the thetas the higher means better
     order <- mcmc_intervals_data_mat %>%
-      arrange(-m) %>%
-      pull(parameter)
+      arrange(-.data$m) %>%
+      dplyr::pull(.data$parameter)
   }
 
   if (!is.null(number_fundable)) {
     # If we draw a funding line
     funding_line_at <- mcmc_intervals_data_mat %>%
-      arrange(m) %>%
+      arrange(.data$m) %>%
       slice(number_fundable) %>%
-      pull(m)
+      dplyr::pull(.data$m)
     mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
-      mutate(rs = ifelse((l <= funding_line_at) & (h >= funding_line_at),
-                         "random selection",
-                         ifelse((l < funding_line_at) & (h < funding_line_at),
+      mutate(rs = ifelse((.data$l <= funding_line_at) &
+                           (.data$h >= funding_line_at), "random selection",
+                         ifelse((.data$l < funding_line_at) &
+                                  (.data$h < funding_line_at),
                                 "accepted", "rejected")),
-             rs = factor(rs, c("accepted", "rejected",
-                               "random selection")))
+             rs = factor(.data$rs, c("accepted", "rejected",
+                                     "random selection")))
     if (!er) {  # for the thetas the higher means better
       funding_line_at <- mcmc_intervals_data_mat %>%
-        arrange(-m) %>%
+        arrange(-.data$m) %>%
         slice(number_fundable) %>%
-        pull(m)
+        dplyr::pull(.data$m)
       mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
-        mutate(rs = ifelse((l <= funding_line_at) & (h >= funding_line_at),
+        mutate(rs = ifelse((.data$l <= funding_line_at) &
+                             (.data$h >= funding_line_at),
                            "random selection",
-                           ifelse((l < funding_line_at) & (h < funding_line_at),
+                           ifelse((.data$l < funding_line_at) &
+                                    (.data$h < funding_line_at),
                                   "rejected", "accepted")),
-               rs = factor(rs, c("accepted", "rejected",
-                                 "random selection")))
+               rs = factor(.data$rs, c("accepted", "rejected",
+                                       "random selection")))
     }
     if (mcmc_intervals_data_mat %>%
-        filter(rs != "rejected") %>%
+        filter(.data$rs != "rejected") %>%
         nrow() == number_fundable) {
       mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
-        mutate(rs = recode_factor(rs, "random selection" = "accepted"))
+        mutate(rs = recode_factor(.data$rs, "random selection" = "accepted"))
     }
   }
 
   plot <- mcmc_intervals_data_mat %>%
-    mutate(parameter = factor(parameter, level = order)) %>%
+    mutate(parameter = factor(.data$parameter, levels = order)) %>%
     ggplot()
   if (outer_show){
     plot <- plot +
-      geom_segment(aes(y = ll, yend = hh, x = parameter, xend = parameter),
+      geom_segment(aes(y = .data$ll, yend = .data$hh,
+                       x = .data$parameter, xend = .data$parameter),
                    size = size_outer, color = "darkgray")
   }
 
@@ -518,9 +499,12 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
     plot <- plot +
       geom_hline(yintercept = funding_line_at,
                  color = "darkblue", alpha = .75, linetype = "dashed") +
-      geom_segment(aes(y = l, yend = h, x = parameter, xend = parameter, color = rs),
+      geom_segment(aes(y = .data$l, yend = .data$h,
+                       x = .data$parameter, xend = .data$parameter,
+                       color = .data$rs),
                    size = size_inner, alpha = alpha_inner) +
-      geom_point(aes(y = m, x = parameter), size = size_pt, color = "darkblue") +
+      geom_point(aes(y = .data$m, x = .data$parameter),
+                 size = size_pt, color = "darkblue") +
       scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
       labs(y = ylab, title = title) +
       theme_minimal() +
@@ -533,9 +517,11 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
             legend.title = element_blank())
   } else {
     plot <- plot +
-      geom_segment(aes(y = l, yend = h, x = parameter, xend = parameter),
+      geom_segment(aes(y = .data$l, yend = .data$h,
+                       x = .data$parameter, xend = .data$parameter),
                    size = size_inner, alpha = alpha_inner, color = "darkblue") +
-      geom_point(aes(y = m, x = parameter), size = size_pt, color = "darkblue") +
+      geom_point(aes(y = .data$m, x = .data$parameter),
+                 size = size_pt, color = "darkblue") +
       labs(y = ylab, title = title) +
       theme_minimal() +
       theme(panel.grid.major.y = element_blank(),
