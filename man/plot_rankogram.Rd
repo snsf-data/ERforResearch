@@ -14,6 +14,7 @@ plot_rankogram(
   n_iter = 5000,
   n_burnin = 1000,
   id_section = NULL,
+  rank_theta_name = "rank_theta",
   theta_name = "application_intercept",
   tau_name = "tau_application",
   tau_voter_name = "tau_voter",
@@ -44,8 +45,11 @@ default model is used. (default = NULL)}
 
 \item{id_section}{name of the section}
 
+\item{rank_theta_name}{the name of the rank of theta in the Bayesian model.
+(default = rank_theta")}
+
 \item{theta_name}{the name of the application identifier. (default =
-application_intercept")}
+"application_intercept")}
 
 \item{tau_name}{name of the the squareroot of tau, being the precision of the
 random effects, in the jags model. (default = sd_application)}

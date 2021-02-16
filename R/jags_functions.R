@@ -63,7 +63,6 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #' @param id_application the name of the application variable in the data
 #' @param id_voter the name of the voter variable in the data (default = NULL)
 #' @param grade_variable the name of the outcome variable
-#' @param model the model definition as character. (default = NULL)
 #' @param path_to_jags_model the path to the jags txt file, if null, the
 #' default model is used. (default = NULL)
 #' @param n_burnin number of burnin iterations
@@ -109,7 +108,6 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #'                                  }
 get_mcmc_samples <- function(data, id_application, id_voter,
                              grade_variable,
-                             model = NULL,
                              path_to_jags_model = NULL,
                              n_chains = 2, n_iter = 10000,
                              n_burnin = 5000, id_section = NULL,
@@ -139,15 +137,11 @@ get_mcmc_samples <- function(data, id_application, id_voter,
                 "non-linear models will be provided at a later stage."))
   }
   ## 3) If no path to model definition is given a default one is used
-  if (is.null(path_to_jags_model) & !is.null(model)) {
-    path_to_jags_model <- model
-  } else {
-    if (is.null(path_to_jags_model)) {
-      if (!quiet)
-        print("Default model is used (check get_default_jags_model function!).")
-      get_default_jags_model()
-      path_to_jags_model <- here("default_jags_model.txt")
-    }
+  if (is.null(path_to_jags_model)) {
+    if (!quiet)
+      print("Default model is used (check get_default_jags_model function!).")
+    get_default_jags_model()
+    path_to_jags_model <- here("default_jags_model.txt")
   }
 
 

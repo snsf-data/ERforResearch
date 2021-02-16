@@ -9,7 +9,6 @@ get_mcmc_samples(
   id_application,
   id_voter,
   grade_variable,
-  model = NULL,
   path_to_jags_model = NULL,
   n_chains = 2,
   n_iter = 10000,
@@ -36,8 +35,6 @@ defined below.}
 \item{id_voter}{the name of the voter variable in the data (default = NULL)}
 
 \item{grade_variable}{the name of the outcome variable}
-
-\item{model}{the model definition as character. (default = NULL)}
 
 \item{path_to_jags_model}{the path to the jags txt file, if null, the
 default model is used. (default = NULL)}

@@ -205,8 +205,10 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 #' @param n_iter how many iterations used in the JAGS sampler? (default = 5000)
 #' @param n_chains number of chains for the JAGS sampler. (default = 4)
 #' @param id_section name of the section
+#' @param rank_theta_name the name of the rank of theta in the Bayesian model.
+#' (default = rank_theta")
 #' @param theta_name the name of the application identifier. (default =
-#' application_intercept")
+#' "application_intercept")
 #' @param tau_name name of the the squareroot of tau, being the precision of the
 #' random effects, in the jags model. (default = sd_application)
 #' @param tau_voter_name name of the (default = tau_voter)
@@ -225,6 +227,7 @@ plot_rankogram <- function(data, id_application, id_voter,
                            path_to_jags_model = NULL,
                            n_chains = 3, n_iter = 5000,
                            n_burnin = 1000, id_section = NULL,
+                           rank_theta_name = "rank_theta",
                            theta_name = "application_intercept",
                            tau_name = "tau_application",
                            tau_voter_name = "tau_voter",
@@ -252,23 +255,26 @@ plot_rankogram <- function(data, id_application, id_voter,
                        n_chains = n_chains, n_iter = n_iter,
                        n_burnin = n_burnin, id_section = id_section,
                        theta_name = theta_name, tau_name = tau_name,
-                       tau_voter_name = tau_voter_name, sigma_name = sigma_name)
+                       tau_voter_name = tau_voter_name, sigma_name = sigma_name,
+                       rank_theta_name = rank_theta_name)
   }
 
-  colnames_theta <- paste0(theta_name, "[", seq_len(n_application), "]")
-  mcmc_samples_thetas <- mcmc_samples[, colnames_theta]
+  colnames_rank_theta <- paste0(rank_theta_name, "[",
+                                seq_len(n_application), "]")
+  mcmc_samples_rank_thetas <- mcmc_samples[, colnames_rank_theta]
 
   # Calculate the P(j = b) for the SUCRA:
   p_j_b <- matrix(NA, nrow = n_application, ncol = n_application)
 
-  ranks <- apply(X = overall_mean + mcmc_samples_thetas,
-                 MARGIN = 1, FUN = function(x) rank(-x))
-
   for (i in seq_len(n_application)) {
     for (j in seq_len(n_application)) {
-      p_j_b[i, j] <- mean(ranks[i, ] == j)
+      p_j_b[i, j] <- mean(mcmc_samples_rank_thetas[, i] == j)
     }
   }
+  # Compute the SUCRA
+  sucra <- sapply(seq_len(nrow(p_j_b)), function(i) {
+    mean(cumsum(p_j_b[i, -nrow(p_j_b)]))
+  })
 
   colnames(p_j_b) <- seq_len(ncol(p_j_b))
   rownames(p_j_b) <- data %>%
@@ -278,8 +284,8 @@ plot_rankogram <- function(data, id_application, id_voter,
   if (!cumulative_rank_prob) {
     p_j_b %>%
       as_tibble(rownames = "application") %>%
-      gather(rank, .data$prob, paste0(1):paste0(ncol(p_j_b))) %>%
-      mutate(rank = as.numeric(rank)) %>%
+      gather("rank", "prob", paste0(1):paste0(ncol(p_j_b))) %>%
+      mutate(rank = as.numeric(.data$rank)) %>%
       ggplot(aes(x = .data$rank, y = .data$prob)) +
       geom_line() +
       labs(x = "Rank", y = "Probability") +
@@ -295,8 +301,8 @@ plot_rankogram <- function(data, id_application, id_voter,
 
     p_j_b %>%
       as_tibble(rownames = "application") %>%
-      gather(rank, .data$prob, paste0(1):paste0(ncol(p_j_b))) %>%
-      mutate(rank = as.numeric(rank)) %>%
+      gather("rank", "prob", paste0(1):paste0(ncol(p_j_b))) %>%
+      mutate(rank = as.numeric(.data$rank)) %>%
       group_by(.data$application) %>%
       arrange(rank) %>%
       mutate(cum_prob = cumsum(.data$prob),
