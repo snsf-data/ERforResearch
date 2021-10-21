@@ -329,8 +329,7 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' @param name_mean the name of the parameter estimating the average voter
 #' behavior (default = "nu").
 #' @param names_voters names of the voters to be written on the y-axis
-#' ticks. Note that the ordering has to be the same as the one they are given to
-#' the `get_mcmc_samples()` function (default = NULL, they are simply numerated).
+#' ticks (default = "voter").
 #' @param title title of the plot (default = NULL, no title).
 #' @param xlim_min minimum of the x-axis (default = -1).
 #' @param xlim_max maximum of the x-axis (default = 1).
@@ -342,7 +341,7 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' @export
 voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
                                         name_mean = "nu",
-                                        names_voters = NULL,
+                                        names_voters = "voter",
                                         title = NULL, xlim_min = -1,
                                         xlim_max = 1,
                                         scale = 1.75){
@@ -352,12 +351,12 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
   voter_behavior_colnames <- paste0(name_mean, "[", seq_len(n_voters), "]")
   voter_behavior_samples <- get_mcmc_samples_result[, voter_behavior_colnames]
 
-  colnames(voter_behavior_samples) <- paste0("voter ",
+  colnames(voter_behavior_samples) <- paste0(names_voters, " ",
                                              seq_len(n_voters))
 
   voter_behavior_sample_for_plot <- voter_behavior_samples %>%
     as_tibble() %>%
-    pivot_longer(cols = starts_with("voter"),
+    pivot_longer(cols = starts_with(names_voters),
                  names_to = "Referee", values_to = "weight") %>%
     group_by(.data$Referee) %>%
     mutate(median = median(.data$weight)) %>%
@@ -376,7 +375,7 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
     xlim(xlim_min, xlim_max) +
     labs(title = title) +
     labs(x = "", y = "") +
-    scale_fill_viridis_c(name = "Voter Effect", option = "C") +
+    scale_fill_viridis_c(name = paste(names_voters, "Effect"), option = "C") +
     geom_vline(xintercept = 0) +
     theme_minimal() +
     theme(panel.grid.major.y = element_line(size = 0.25, linetype = "solid",

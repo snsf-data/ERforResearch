@@ -25,19 +25,53 @@ get_num_grade_snsf <- function(grade) {
 #' @param delete_NA should the missing (numeric) grades be deleted?
 #' (default = TRUE)
 #' @param fun_grade_to_num function that translates grades to numeric values
+#' @param first_voter The column name of the first voter in the matrix (not
+#' needed if prefix_voter is not null).
+#' @param last_voter The column name of the last voter in the matrix (not
+#' needed if prefix_voter is not null).
 #' @import stringr
 #' @export
-get_right_data_format <- function(individual_votes, prefix_voter = "voter",
+get_right_data_format <- function(individual_votes, prefix_voter = NULL,
                                   fun_grade_to_num = get_num_grade_snsf,
-                                  delete_NA = TRUE) {
-  long_data <- individual_votes %>%
-    # Get the data into a long format
-    pivot_longer(cols = starts_with(prefix_voter), names_to = "voter",
-                 values_to = "grade") %>%
-    # Make sure all the grades are upper case and convert them to a numeric
-    # variable using the function specified in fun_grade_to_num:
-    mutate(grade = str_to_upper(.data$grade),
-           num_grade = fun_grade_to_num(.data$grade))
+                                  delete_NA = TRUE, first_voter = NULL,
+                                  last_voter = NULL) {
+
+  if (is.null(prefix_voter) & is.null(first_voter) & is.null(last_voter)){
+    stop(paste0("Please either give a prefix of the voter variables, e.g. ",
+                "voter if voter1:voter9, or the name of the first_voter ",
+                "and last_voter in the individivual votes matrix."))
+  }
+  if (!is.null(prefix_voter) & !(is.null(first_voter) & is.null(last_voter))){
+    print(paste0("Note that only the parameter prefix_voter is used to define ",
+                 "the voter variables."))
+  }
+  if (is.null(prefix_voter) & !is.null(first_voter) & is.null(last_voter)){
+    stop(paste0("You need to specify the column name of the last_voter too."))
+  }
+  if (is.null(prefix_voter) & is.null(first_voter) & !is.null(last_voter)){
+    stop(paste0("You need to specify the column name of the first_voter too."))
+  }
+
+  if (is.null(prefix_voter)){
+    long_data <- individual_votes %>%
+      # Get the data into a long format
+      pivot_longer(cols = !!(first_voter):!!(last_voter), names_to = "voter",
+                   values_to = "grade") %>%
+      # Make sure all the grades are upper case and convert them to a numeric
+      # variable using the function specified in fun_grade_to_num:
+      mutate(grade = str_to_upper(.data$grade),
+             num_grade = fun_grade_to_num(.data$grade))
+  } else {
+    long_data <- individual_votes %>%
+      # Get the data into a long format
+      pivot_longer(cols = starts_with(prefix_voter), names_to = "voter",
+                   values_to = "grade") %>%
+      # Make sure all the grades are upper case and convert them to a numeric
+      # variable using the function specified in fun_grade_to_num:
+      mutate(grade = str_to_upper(.data$grade),
+             num_grade = fun_grade_to_num(.data$grade))
+  }
+
   if (delete_NA) {
     long_data <- long_data %>%
       filter(!is.na(.data$num_grade))
