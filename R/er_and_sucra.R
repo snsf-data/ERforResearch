@@ -39,6 +39,13 @@
 #' from the JAGS model samples? (NULL by default)
 #' @param rank_theta_name the name of the rank of theta in the JAGS model
 #' (default = rank_theta)
+#' @param ordinal_scale dummy variable informing us on whether or not the
+#' outcome is on an ordinal scale (default = FALSE)
+#' @param point_scale integer informing us on the number of points of the
+#' ordinal scale; not needed for continuous scale (default = NULL)
+#' @param heterogeneous_residuals dummy variable informing us on whether or not
+#' the residuals should be heterogeneous (in this case you have to update the
+#' JAGS model too, default = FALSE)
 #' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
 #' @param seed set a seed for the JAGS model (default = 1991)
 #' @param quiet if the default model is used this function generates a warning.
@@ -72,6 +79,9 @@ get_er_from_jags <-  function(data, id_application,
                               sigma_name = "sigma",
                               rank_theta_name = "rank_theta",
                               other_variables = NULL,
+                              ordinal_scale = FALSE,
+                              heterogeneous_residuals = FALSE,
+                              point_scale = NULL,
                               mcmc_samples = NULL,
                               seed = 1991,
                               quiet = FALSE) {
@@ -95,6 +105,14 @@ get_er_from_jags <-  function(data, id_application,
   if (any(presence_of_variables)) {
     stop(paste0(c(id_application, id_voter, grade_variable, id_section)[
       which(presence_of_variables)], " needed, but not present in dataset."))
+  }
+
+  ## 4) If ordinal_scale, do we have a number of points on the scale?
+  if (ordinal_scale) {
+    if (is.null(point_scale)) stop(paste0("If you want to operate on an ",
+                                          "ordinal scale, please specify the ",
+                                          "number of points on the scale, in ",
+                                          "point_scale."))
   }
 
   # Number of applications and overall mean:
@@ -126,6 +144,10 @@ get_er_from_jags <-  function(data, id_application,
                                      sigma_name = sigma_name,
                                      other_variables = other_variables,
                                      rank_theta_name = rank_theta_name,
+                                     ordinal_scale = ordinal_scale,
+                                     point_scale = point_scale,
+                                     heterogeneous_residuals =
+                                       heterogeneous_residuals,
                                      seed = seed, quiet = quiet)
   }
 
@@ -139,7 +161,6 @@ get_er_from_jags <-  function(data, id_application,
   colnames_ranks <- paste0(rank_theta_name, "[", seq_len(n_application), "]")
   # mcmc_samples_ranks <- mcmc_samples[, colnames_ranks]
   mcmc_samples_ranks <- mcmc_samples[, colnames_ranks]
-
 
   # The expected ranks, as the posterior expectation of the ranks:
   ers <- colMeans(mcmc_samples_ranks)

@@ -21,6 +21,9 @@ get_er_from_jags(
   sigma_name = "sigma",
   rank_theta_name = "rank_theta",
   other_variables = NULL,
+  ordinal_scale = FALSE,
+  heterogeneous_residuals = FALSE,
+  point_scale = NULL,
   mcmc_samples = NULL,
   seed = 1991,
   quiet = FALSE
@@ -71,6 +74,16 @@ needed (default = NULL).}
 
 \item{other_variables}{are there other variables we would like to extract
 from the JAGS model samples? (NULL by default)}
+
+\item{ordinal_scale}{dummy variable informing us on whether or not the
+outcome is on an ordinal scale (default = FALSE)}
+
+\item{heterogeneous_residuals}{dummy variable informing us on whether or not
+the residuals should be heterogeneous (in this case you have to update the
+JAGS model too, default = FALSE)}
+
+\item{point_scale}{integer informing us on the number of points of the
+ordinal scale; not needed for continuous scale (default = NULL)}
 
 \item{mcmc_samples}{if the mcmc sample has already been run (default = NULL).}
 

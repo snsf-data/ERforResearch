@@ -416,7 +416,10 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 #' (default = 2)
 #' @param size_pt the size of the point estimate (mean, ER) (default = 1.5)
 #' @param alpha_inner alpha for the color of the inner CrI
+#' @param alpha_outer alpha for the color of the inner CrI
 #' @param proposal Word written infront of number (default = "Proposal")
+#' @param use_outer_inner should the inner or outer CRI be used for funding
+#' decisions (default = "inner")
 #' @return the result is a plot of the expected rank together with their
 #' credible intervals
 #' @import bayesplot
@@ -429,7 +432,9 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                   number_fundable = NULL, outer_show = TRUE,
                                   size_pt = 1.5, size_outer = .5,
                                   size_inner = 2, alpha_inner = .5,
-                                  proposal = "Proposal "){
+                                  alpha_outer = 1,
+                                  proposal = "Proposal ",
+                                  use_outer_inner = "inner"){
 
 
   er_colnames <- paste0(name_er_or_theta, "[", seq_len(n_proposals), "]")
@@ -459,6 +464,7 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
       arrange(.data$m) %>%
       slice(number_fundable) %>%
       dplyr::pull(.data$m)
+    if (use_outer_inner == "inner") {
     mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
       mutate(rs = ifelse((.data$l <= funding_line_at) &
                            (.data$h >= funding_line_at), "random selection",
@@ -467,6 +473,19 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                 "accepted", "rejected")),
              rs = factor(.data$rs, c("accepted", "rejected",
                                      "random selection")))
+    }
+    if (use_outer_inner == "outer") {
+      mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
+        mutate(rs = ifelse((.data$ll <= funding_line_at) &
+                             (.data$hh >= funding_line_at), "random selection",
+                           ifelse((.data$ll < funding_line_at) &
+                                    (.data$hh < funding_line_at),
+                                  "accepted", "rejected")),
+               rs = factor(.data$rs, c("accepted", "rejected",
+                                       "random selection")))
+    }
+
+
     if (!er) {  # for the thetas the higher means better
       funding_line_at <- mcmc_intervals_data_mat %>%
         arrange(-.data$m) %>%
@@ -482,6 +501,7 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                rs = factor(.data$rs, c("accepted", "rejected",
                                        "random selection")))
     }
+
     if (mcmc_intervals_data_mat %>%
         filter(.data$rs != "rejected") %>%
         nrow() == number_fundable) {
@@ -494,10 +514,19 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
     mutate(parameter = factor(.data$parameter, levels = order)) %>%
     ggplot()
   if (outer_show){
-    plot <- plot +
-      geom_segment(aes(y = .data$ll, yend = .data$hh,
-                       x = .data$parameter, xend = .data$parameter),
-                   size = size_outer, color = "darkgray")
+    if (use_outer_inner == "inner" & !is.null(number_fundable)) {
+      plot <- plot +
+        geom_segment(aes(y = .data$ll, yend = .data$hh,
+                         x = .data$parameter, xend = .data$parameter),
+                     size = size_outer, color = "darkgray")
+    }
+    if (use_outer_inner == "outer") {
+      plot <- plot +
+        geom_segment(aes(y = .data$ll, yend = .data$hh,
+                         x = .data$parameter, xend = .data$parameter,
+                         color = .data$rs),
+                   size = size_outer, alpha = alpha_outer)
+    }
   }
 
 

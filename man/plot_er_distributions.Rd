@@ -20,7 +20,9 @@ plot_er_distributions(
   size_outer = 0.5,
   size_inner = 2,
   alpha_inner = 0.5,
-  proposal = "Proposal "
+  alpha_outer = 1,
+  proposal = "Proposal ",
+  use_outer_inner = "inner"
 )
 }
 \arguments{
@@ -62,7 +64,12 @@ the `get_mcmc_samples()` function (default = NULL, they are simply numerated).}
 
 \item{alpha_inner}{alpha for the color of the inner CrI}
 
+\item{alpha_outer}{alpha for the color of the inner CrI}
+
 \item{proposal}{Word written infront of number (default = "Proposal")}
+
+\item{use_outer_inner}{should the inner or outer CRI be used for funding
+decisions (default = "inner")}
 }
 \value{
 the result is a plot of the expected rank together with their

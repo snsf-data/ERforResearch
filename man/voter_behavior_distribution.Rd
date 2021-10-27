@@ -8,7 +8,7 @@ voter_behavior_distribution(
   get_mcmc_samples_result,
   n_voters,
   name_mean = "nu",
-  names_voters = NULL,
+  names_voters = "voter",
   title = NULL,
   xlim_min = -1,
   xlim_max = 1,
@@ -24,8 +24,7 @@ voter_behavior_distribution(
 behavior (default = "nu").}
 
 \item{names_voters}{names of the voters to be written on the y-axis
-ticks. Note that the ordering has to be the same as the one they are given to
-the `get_mcmc_samples()` function (default = NULL, they are simply numerated).}
+ticks (default = "voter").}
 
 \item{title}{title of the plot (default = NULL, no title).}
 

@@ -80,6 +80,13 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
 #' (default = tau_voter)
 #' @param tau_section_name name of the standard error of the section effect, if
 #' needed
+#' @param ordinal_scale dummy variable informing us on whether or not the
+#' outcome is on an ordinal scale (default = FALSE)
+#' @param point_scale integer informing us on the number of points of the
+#' ordinal scale; not needed for continuous scale (default = NULL)
+#' @param heterogeneous_residuals dummy variable informing us on whether or not
+#' the residuals should be heterogeneous (in this case you have to update the
+#' JAGS model too, default = FALSE)
 #' @param sigma_name name of the standard deviation of the full model.
 #' (default = sigma)
 #' @param other_variables are there other variables we would like to extract?
@@ -116,6 +123,9 @@ get_mcmc_samples <- function(data, id_application, id_voter,
                              sigma_name = "sigma",
                              tau_voter_name = "tau_voter",
                              tau_section_name = NULL,
+                             ordinal_scale = FALSE,
+                             point_scale = NULL,
+                             heterogeneous_residuals = FALSE,
                              rank_theta_name = "rank_theta",
                              other_variables = NULL,
                              seed = 1991, quiet = FALSE,
@@ -133,17 +143,28 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   if ((data %>%
        dplyr::pull(grade_variable) %>%
        class()) != "numeric") {
-    stop(paste0("The grade_variable has to be numeric. Extensions for ",
-                "non-linear models will be provided at a later stage."))
+    stop(paste0("The grade_variable has to be numeric. Even if you consider ",
+                "an ordinal outcome, 1 should represent the lowest ",
+                "category."))
   }
+
   ## 3) If no path to model definition is given a default one is used
   if (is.null(path_to_jags_model)) {
     if (!quiet)
       print("Default model is used (check get_default_jags_model function!).")
-    get_default_jags_model()
-    path_to_jags_model <- here("default_jags_model.txt")
+    if (!ordinal_scale) {
+      get_default_jags_model()
+      path_to_jags_model <- here("default_jags_model.txt")
+    } else stop("No default model for ordinal outcome implemented yet.")
   }
 
+  ## 4) If ordinal_scale, do we have a number of points on the scale?
+  if (ordinal_scale) {
+    if (is.null(point_scale)) stop(paste0("If you want to operate on an ",
+                                          "ordinal scale, please specify the ",
+                                          "number of points on the scale, in ",
+                                          "point_scale."))
+  }
 
   # We need to add integer/count-like numeric ids for the application and the
   # voters in the data for the computation of the JAGS model:
@@ -174,23 +195,45 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   data <- data %>%
     filter(!is.na(grade_variable))
 
-  # RJAGS needs a list containing all the data
+  ## RJAGS needs a list containing all the data
+  # The numeric version of the outcome
+  if (ordinal_scale){ # For the ordinal model dinterval() is used, which forces
+    # the level of the ordinal scale to start at 0, not at 1.
+    num_outcome <- data %>% dplyr::pull(get(grade_variable)) - 1
+    overall_mean <- data %>%
+      group_by(num_application) %>%
+      summarise(av = mean(get(grade_variable) - 1, na.rm = TRUE)) %>%
+      dplyr::pull(.data$av) %>%
+      mean()
+    } else {
+      num_outcome <- data %>% dplyr::pull(get(grade_variable))
+      overall_mean <- data %>%
+        group_by(num_application) %>%
+        summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
+        dplyr::pull(.data$av) %>%
+        mean()
+    }
+
   data_for_jags <-
     list(n = nrow(data),
          n_application = length(unique(data$num_application)),
          n_voters = length(unique(data$num_voter)),
-         grade = data %>% dplyr::pull(get(grade_variable)),
-         overall_mean = data %>%
-           group_by(num_application) %>%
-           summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
-           dplyr::pull(.data$av) %>%
-           mean(),
+         grade = num_outcome,
+         overall_mean = overall_mean,
          num_application = data$num_application,
          num_voter = data$num_voter)
   if (!is.null(id_section)) { # if we have a section effect
     data_for_jags <- c(data_for_jags,
                        list(n_section = length(unique(data$num_section)),
                             num_section = data$num_section))
+  }
+  if (heterogeneous_residuals){
+    data_for_jags <- c(data_for_jags,
+                       list(mean_application = data %>%
+                              group_by(num_application) %>%
+                              summarise(av = mean(get(grade_variable),
+                                                  na.rm = TRUE)) %>%
+                              dplyr::pull(.data$av)))
   }
 
 
@@ -203,6 +246,13 @@ get_mcmc_samples <- function(data, id_application, id_voter,
 
   inits <- rep(list(list(.RNG.name = "base::Wichmann-Hill",
                          .RNG.seed = seed)), n_chains)
+  if (ordinal_scale){
+    inits <- rep(list(list(.RNG.name = "base::Wichmann-Hill",
+                           .RNG.seed = seed,
+                           cc = seq(.5, point_scale - 1, 1),
+                           latent_trait = data_for_jags$grade)),
+                 n_chains)
+  }
   if (n_chains > 1) {
     for (i in seq_len(n_chains)) inits[[i]]$.RNG.seed <- seed + (i-1)
   }

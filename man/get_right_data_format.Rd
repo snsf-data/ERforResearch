@@ -6,9 +6,11 @@
 \usage{
 get_right_data_format(
   individual_votes,
-  prefix_voter = "voter",
+  prefix_voter = NULL,
   fun_grade_to_num = get_num_grade_snsf,
-  delete_NA = TRUE
+  delete_NA = TRUE,
+  first_voter = NULL,
+  last_voter = NULL
 )
 }
 \arguments{
@@ -20,6 +22,12 @@ get_right_data_format(
 
 \item{delete_NA}{should the missing (numeric) grades be deleted?
 (default = TRUE)}
+
+\item{first_voter}{The column name of the first voter in the matrix (not
+needed if prefix_voter is not null).}
+
+\item{last_voter}{The column name of the last voter in the matrix (not
+needed if prefix_voter is not null).}
 }
 \description{
 This function transforms the default csv file with the individual votes into

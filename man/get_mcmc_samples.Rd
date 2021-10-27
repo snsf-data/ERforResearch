@@ -19,6 +19,9 @@ get_mcmc_samples(
   sigma_name = "sigma",
   tau_voter_name = "tau_voter",
   tau_section_name = NULL,
+  ordinal_scale = FALSE,
+  point_scale = NULL,
+  heterogeneous_residuals = FALSE,
   rank_theta_name = "rank_theta",
   other_variables = NULL,
   seed = 1991,
@@ -64,6 +67,16 @@ variable is needed for the computation of the rankability
 
 \item{tau_section_name}{name of the standard error of the section effect, if
 needed}
+
+\item{ordinal_scale}{dummy variable informing us on whether or not the
+outcome is on an ordinal scale (default = FALSE)}
+
+\item{point_scale}{integer informing us on the number of points of the
+ordinal scale; not needed for continuous scale (default = NULL)}
+
+\item{heterogeneous_residuals}{dummy variable informing us on whether or not
+the residuals should be heterogeneous (in this case you have to update the
+JAGS model too, default = FALSE)}
 
 \item{rank_theta_name}{the name of the rank of theta in the JAGS model
 (default = rank_theta)}
