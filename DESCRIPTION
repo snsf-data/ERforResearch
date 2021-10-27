@@ -1,7 +1,7 @@
 Package: ERforResearch
 Type: Package
 Title: Expected Rank for Research Evaluation
-Version: 0.1.0.9008
+Version: 0.1.0.9006
 Authors@R:
     c(person(given = "Rachel",
              family = "Heyard",
@@ -12,7 +12,7 @@ Encoding: UTF-8
 Imports: bayesplot, ggridges, stringr, ggrepel, coda,
     bookdown,
     here
-Depends: rjags, dplyr, tidyr, ggplot2
+Depends: rjags, here, dplyr, tidyr, ggplot2
 LazyData: true
 RoxygenNote: 7.1.1
 Suggests:
