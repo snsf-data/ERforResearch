@@ -9,20 +9,43 @@ options(dplyr.summarise.inform = FALSE)
 #'
 #' This function simply stores a txt file with a default jags model, in a
 #' certain path.
+#' @param outcome_variable the nature of the outcome variable: continuous or
+#' ordinal. (default = "continuous")
+#' @param residuals the nature of the residuals in the model: homogeneous or
+#' heterogeneous. (default = "homogeneous")
 #' @param path where should it be stored, from here()? (default = jags_model.txt)
+#' @param quiet if TRUE, do not show messages.
 #' @import here
 #' @details The model defined here has a random component for the application /
 #' the proposal and the voter / the evaluator. There is no other grouping
 #' variable defined, as for example a section or panel. The user is invited to
-#' write their own model definition if more flexibility is needed.
+#' write their own model definition if more flexibility is needed. However, the
+#' user can decide between a continuous or ordinal outcome variable, and
+#' homogeneous or heterogenous residuals.
 #' @examples
 #' # The model definition .txt is stored in the file "default_jags_model.txt"
 #' \dontrun{
 #' get_default_jags_model()
 #' }
 #' @export
-get_default_jags_model <- function(path = "default_jags_model.txt") {
-  cat("model{
+get_default_jags_model <- function(outcome_variable = "continuous",
+                                   residuals = "homogeneous",
+                                   path = "default_jags_model.txt",
+                                   quiet = FALSE) {
+  if (!(outcome_variable %in% c("continuous", "ordinal")) |
+      !(residuals %in% c("homogeneous", "heterogeneous"))){
+    stop("The outcome variable can either be continuous or ordinal, while the
+         residuals can be homogeneous or heterogeneous. Check the function
+         parameters outcome_variable and residuals!")
+  }
+
+  if (outcome_variable == "ordinal" & !quiet) {
+    print("Be aware that the default ordinal model fixes the outcome to a six-
+          point scale.")
+  }
+
+  if (outcome_variable == "continuous" & residuals == "homogeneous"){
+    cat("model{
       # Likelihood:
       for (i in 1:n) { # i is not the application but the review
           grade[i] ~ dnorm(mu[i], inv_sigma2)
@@ -51,7 +74,128 @@ get_default_jags_model <- function(path = "default_jags_model.txt") {
       inv_tau_voter2 <- pow(tau_voter, -2)
       tau_voter ~ dunif(0.000001, 2)
       }",
-      file = here(path))
+        file = here(path))
+  }
+  if (outcome_variable == "ordinal" & residuals == "homogeneous"){
+    cat("model{
+      # Likelihood:
+      for (i in 1:n) { # i is not the application but the review
+          grade[i] ~ dinterval(latent_trait[i], c[])
+          latent_trait[i] ~ dnorm(mu[i], inv_sigma2)
+          mu[i] <- overall_mean + application_intercept[num_application[i]] +
+            voter_intercept[num_application[i], num_voter[i]]
+      }
+      # Ranks:
+      rank_theta[1:n_application] <- rank(-application_intercept[])
+      # Priors:
+      for (j in 1:n_application){
+        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      }
+      for (l in 1:n_voters){
+        for(j in 1:n_application){
+          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+        }
+      }
+      for (l in 1:n_voters){
+        nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
+      }
+
+      for (k in 1:5){
+        cc[k] ~ dunif(-1000, 1000)
+      }
+      c[1:5] <- sort(cc)
+
+      sigma ~ dunif(0.000001, 2)
+      inv_sigma2 <- pow(sigma, -2)
+      inv_tau_application2 <- pow(tau_application, -2)
+      tau_application ~ dunif(0.000001, 2)
+      inv_tau_voter2 <- pow(tau_voter, -2)
+      tau_voter ~ dunif(0.000001, 2)
+    }", file = here(path))
+  }
+  if (outcome_variable == "continuous" & residuals == "heterogeneous"){
+    cat("model{
+     # Likelihood:
+      for (i in 1:n) { # i is not the application but the review
+      grade[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
+      # inv_sigma2 is precision (1 / variance)
+      mu[i] <- overall_mean + application_intercept[num_application[i]] +
+      voter_intercept[num_application[i], num_voter[i]]
+      # + section_intercept[num_section[i]] # if needed
+      }
+      # Ranks:
+      rank_theta[1:n_application] <- rank(-application_intercept[])
+      # Priors:
+      for (j in 1:n_application){
+        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+        sigma2[j] = exp(alpha + beta * log(mean_application[j]) + omega[j])
+        inv_sigma2[j] = 1/sigma2[j]
+        omega[j] ~ dnorm(0, inv_tau_omega)
+      }
+      for (l in 1:n_voters){
+        for(j in 1:n_application){
+          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+        }
+      }
+      for (l in 1:n_voters){
+        nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
+      }
+
+      inv_tau_application2 <- pow(tau_application, -2)
+      inv_tau_omega <- pow(tau_omega, -2)
+      tau_application ~ dunif(0.000001, 2)
+      inv_tau_voter2 <- pow(tau_voter, -2)
+      tau_voter ~ dunif(0.000001, 2)
+      tau_omega ~ dunif(0.000001, 10)
+
+      alpha ~ dnorm(0, 0.01)
+      beta ~ dnorm(0, 0.01)
+      }",
+        file = here(path))
+  }
+  if (outcome_variable == "ordinal" & residuals == "heterogeneous"){
+    cat("model{
+          # Likelihood:
+      for (i in 1:n) { # i is not the application but the review
+          grade[i] ~ dinterval(latent_trait[i], c[])
+          latent_trait[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
+          mu[i] <- overall_mean + application_intercept[num_application[i]] +
+            voter_intercept[num_application[i], num_voter[i]]
+      }
+      # Ranks:
+      rank_theta[1:n_application] <- rank(-application_intercept[])
+      # Priors:
+      for (j in 1:n_application){
+        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+        sigma2[j] = exp(alpha + beta * log(mean_application[j]) + omega[j])
+        inv_sigma2[j] = 1/sigma2[j]
+        omega[j] ~ dnorm(0, inv_tau_omega)
+      }
+      for (l in 1:n_voters){
+        for(j in 1:n_application){
+          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+        }
+      }
+      for (l in 1:n_voters){
+        nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
+      }
+
+      for (k in 1:5){
+        cc[k] ~ dunif(-1000, 1000)
+      }
+      c[1:5] <- sort(cc)
+
+      inv_tau_omega <- pow(tau_omega, -2)
+      inv_tau_application2 <- pow(tau_application, -2)
+      tau_application ~ dunif(0.000001, 2)
+      inv_tau_voter2 <- pow(tau_voter, -2)
+      tau_voter ~ dunif(0.000001, 2)
+      tau_omega ~ dunif(0.000001, 10)
+
+      alpha ~ dnorm(0, 0.01)
+      beta ~ dnorm(0, 0.01)
+    }", file = here(path))
+  }
 }
 
 
@@ -150,12 +294,25 @@ get_mcmc_samples <- function(data, id_application, id_voter,
 
   ## 3) If no path to model definition is given a default one is used
   if (is.null(path_to_jags_model)) {
+    if (!ordinal_scale & !heterogeneous_residuals) {
+      get_default_jags_model()
+    } else {
+      if (!ordinal_scale & heterogeneous_residuals) {
+        get_default_jags_model(residuals = "heterogeneous")
+      } else {
+        if (ordinal_scale & heterogeneous_residuals) {
+          get_default_jags_model(outcome_variable = "ordinal",
+                                 residuals = "heterogeneous")
+        } else {
+          if (ordinal_scale & !heterogeneous_residuals) {
+            get_default_jags_model(outcome_variable = "ordinal")
+          } else stop("No default model for your case implemented yet.")
+        }
+      }
+    }
+    path_to_jags_model <- here("default_jags_model.txt")
     if (!quiet)
       print("Default model is used (check get_default_jags_model function!).")
-    if (!ordinal_scale) {
-      get_default_jags_model()
-      path_to_jags_model <- here("default_jags_model.txt")
-    } else stop("No default model for ordinal outcome implemented yet.")
   }
 
   ## 4) If ordinal_scale, do we have a number of points on the scale?

@@ -4,10 +4,23 @@
 \alias{get_default_jags_model}
 \title{Write a default jags model}
 \usage{
-get_default_jags_model(path = "default_jags_model.txt")
+get_default_jags_model(
+  outcome_variable = "continuous",
+  residuals = "homogeneous",
+  path = "default_jags_model.txt",
+  quiet = FALSE
+)
 }
 \arguments{
+\item{outcome_variable}{the nature of the outcome variable: continuous or
+ordinal. (default = "continuous")}
+
+\item{residuals}{the nature of the residuals in the model: homogeneous or
+heterogeneous. (default = "homogeneous")}
+
 \item{path}{where should it be stored, from here()? (default = jags_model.txt)}
+
+\item{quiet}{if TRUE, do not show messages.}
 }
 \description{
 This function simply stores a txt file with a default jags model, in a
@@ -17,7 +30,9 @@ certain path.
 The model defined here has a random component for the application /
 the proposal and the voter / the evaluator. There is no other grouping
 variable defined, as for example a section or panel. The user is invited to
-write their own model definition if more flexibility is needed.
+write their own model definition if more flexibility is needed. However, the
+user can decide between a continuous or ordinal outcome variable, and
+homogeneous or heterogenous residuals.
 }
 \examples{
 # The model definition .txt is stored in the file "default_jags_model.txt"
