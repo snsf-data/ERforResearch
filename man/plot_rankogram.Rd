@@ -10,17 +10,26 @@ plot_rankogram(
   id_voter,
   grade_variable = "num_grade",
   path_to_jags_model = NULL,
-  n_chains = 3,
+  n_chains = 2,
   n_iter = 5000,
   n_burnin = 1000,
+  n_adapt = 1000,
   id_section = NULL,
   rank_theta_name = "rank_theta",
   theta_name = "application_intercept",
   tau_name = "tau_application",
   tau_voter_name = "tau_voter",
+  tau_section_name = NULL,
   sigma_name = "sigma",
   cumulative_rank_prob = FALSE,
-  mcmc_samples = NULL
+  ordinal_scale = FALSE,
+  heterogeneous_residuals = FALSE,
+  point_scale = NULL,
+  inits_type = "random",
+  initial_values = NULL,
+  mcmc_samples = NULL,
+  seed = 1991,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -37,11 +46,15 @@ defined below.}
 \item{path_to_jags_model}{the path to the jags txt file, if null, the
 default model is used. (default = NULL)}
 
-\item{n_chains}{number of chains for the JAGS sampler. (default = 4)}
+\item{n_chains}{number of chains for the JAGS sampler. (default = 2)}
 
-\item{n_iter}{how many iterations used in the JAGS sampler? (default = 5000)}
+\item{n_iter}{how many iterations used in the JAGS sampler?
+(default = 5000)}
 
-\item{n_burnin}{number of burnin iterations}
+\item{n_burnin}{number of burnin iterations discarded. (default = 1000)}
+
+\item{n_adapt}{number of iterations discarded for the adaptation phase.
+(default = 1000)}
 
 \item{id_section}{name of the section}
 
@@ -51,17 +64,42 @@ default model is used. (default = NULL)}
 \item{theta_name}{the name of the application identifier. (default =
 "application_intercept")}
 
-\item{tau_name}{name of the the squareroot of tau, being the precision of the
+\item{tau_name}{name of tau in the JAGS model, being the precision of the
 random effects, in the jags model. (default = sd_application)}
 
-\item{tau_voter_name}{name of the (default = tau_voter)}
+\item{tau_voter_name}{name of the standard error of the voter effect.
+(default = tau_voter)}
+
+\item{tau_section_name}{name of the strandard error of the section effect, if
+needed (default = NULL).}
 
 \item{sigma_name}{name of the standard error of th term (default = sigma)}
 
 \item{cumulative_rank_prob}{should the cumulative ranking probabilities be
 represented instead}
 
+\item{ordinal_scale}{dummy variable informing us on whether or not the
+outcome is on an ordinal scale (default = FALSE)}
+
+\item{heterogeneous_residuals}{dummy variable informing us on whether or not
+the residuals should be heterogeneous (in this case you have to update the
+JAGS model too, default = FALSE)}
+
+\item{point_scale}{integer informing us on the number of points of the
+ordinal scale; not needed for continuous scale (default = NULL)}
+
+\item{inits_type}{type of the initial values, default is "random", but if two
+chains are used, the initial values can also be  "overdispersed"}
+
+\item{initial_values}{The list of initial values for the jags sampler can be
+provided directly}
+
 \item{mcmc_samples}{if the mcmc sample has already been run (default = NULL).}
+
+\item{seed}{set a seed for the JAGS model (default = 1991)}
+
+\item{quiet}{if the default model is used this function generates a warning.
+if quiet = TRUE, this warning is not shown}
 }
 \value{
 the result is a plot of the rankogram (or cumulative ranking

@@ -16,9 +16,13 @@
 #' Extensions for non-linear models will be provided at a later stage.
 #' @param path_to_jags_model the path to the jags txt file, if null, the
 #' default model is used. (default = NULL)
-#' @param n_burnin number of burnin iterations
-#' @param n_iter how many iterations used in the JAGS sampler? (default = 5000)
-#' @param n_chains number of chains for the JAGS sampler. (default = 4)
+#' @param n_iter how many iterations used in the JAGS sampler?
+#'  (default = 5000)
+#' @param n_chains number of chains for the JAGS sampler. (default = 2)
+#' @param n_adapt number of iterations discarded for the adaptation phase.
+#'  (default = 1000)
+#' @param n_burnin number of burnin iterations discarded. (default = 1000)
+#' @param max_iter maximum number of iteration (default = 1 million)
 #' @param id_section name of the section
 #' @param theta_name the name of the application identifier in the JAGS model.
 #' (default = application_intercept")
@@ -39,6 +43,8 @@
 #' from the JAGS model samples? (NULL by default)
 #' @param rank_theta_name the name of the rank of theta in the JAGS model
 #' (default = rank_theta)
+#' @param rank_pm should the rank based on the posterior mean by computed?
+#' default = TRUE
 #' @param ordinal_scale dummy variable informing us on whether or not the
 #' outcome is on an ordinal scale (default = FALSE)
 #' @param point_scale integer informing us on the number of points of the
@@ -46,7 +52,16 @@
 #' @param heterogeneous_residuals dummy variable informing us on whether or not
 #' the residuals should be heterogeneous (in this case you have to update the
 #' JAGS model too, default = FALSE)
-#' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
+#' @param mcmc_samples if the mcmc sample has already been run. This should be
+#' the direct output from get_mcmc_samples. (default = NULL).
+#' @param inits_type type of the initial values, default is "random", but if two
+#' chains are used, the initial values can also be  "overdispersed"
+#' @param initial_values The list of initial values for the jags sampler can be
+#' provided directly
+#' @param variables_to_sample should the default variables be samples, or will
+#' they be "specified" (in names_variables_to_sample), default is "default".
+#' @param names_variables_to_sample if variables to sample are specified, write
+#' their names here, as a character-vector, default is NULL.
 #' @param seed set a seed for the JAGS model (default = 1991)
 #' @param quiet if the default model is used this function generates a warning.
 #' if quiet = TRUE, this warning is not shown
@@ -70,19 +85,26 @@ get_er_from_jags <-  function(data, id_application,
                               id_voter = NULL,
                               grade_variable,
                               path_to_jags_model = NULL,
-                              n_chains = 3, n_iter = 5000,
-                              n_burnin = 1000, id_section = NULL,
+                              n_chains = 2, n_iter = 5000,
+                              n_burnin = 1000, n_adapt = 1000,
+                              max_iter = 1000000,
+                              id_section = NULL,
                               theta_name = "application_intercept",
                               tau_name = "tau_application",
                               tau_voter_name = "tau_voter",
                               tau_section_name = NULL,
                               sigma_name = "sigma",
                               rank_theta_name = "rank_theta",
+                              rank_pm = TRUE,
                               other_variables = NULL,
                               ordinal_scale = FALSE,
                               heterogeneous_residuals = FALSE,
                               point_scale = NULL,
                               mcmc_samples = NULL,
+                              inits_type = "random",
+                              initial_values = NULL,
+                              variables_to_sample = "default",
+                              names_variables_to_sample = NULL,
                               seed = 1991,
                               quiet = FALSE) {
 
@@ -135,7 +157,8 @@ get_er_from_jags <-  function(data, id_application,
                                      grade_variable = grade_variable,
                                      path_to_jags_model = path_to_jags_model,
                                      n_chains = n_chains, n_iter = n_iter,
-                                     n_burnin = n_burnin,
+                                     n_adapt = n_adapt, n_burnin = n_burnin,
+                                     max_iter = max_iter,
                                      id_section = id_section,
                                      theta_name = theta_name,
                                      tau_name = tau_name,
@@ -148,14 +171,34 @@ get_er_from_jags <-  function(data, id_application,
                                      point_scale = point_scale,
                                      heterogeneous_residuals =
                                        heterogeneous_residuals,
+                                     inits_type = inits_type,
+                                     initial_values = initial_values,
+                                     variables_to_sample = variables_to_sample,
+                                     names_variables_to_sample =
+                                       names_variables_to_sample,
                                      seed = seed, quiet = quiet)
+  } else {
+    if (length(mcmc_samples) != 6) {
+      stop(paste0("Make sure that the object given to mcmc_samples is an ",
+                  "object that was build with get_mcmc_samples()."))
+    }
   }
+  # Get information out of the mcmc_samples object:
+  final_n_chains <- mcmc_samples$n_chains
+  final_n_adapt <- mcmc_samples$n_adapt
+  final_n_burnin <- mcmc_samples$n_burnin
+  final_n_iter <- mcmc_samples$n_iter
+  if (is.list(mcmc_samples$samples)) {
+    mcmc_samples <- do.call(rbind, mcmc_samples$samples)
+  } else mcmc_samples <- mcmc_samples$samples
 
 
   # Extract theta samples for the ranking based on the posterior means:
-  colnames_theta <- paste0(theta_name, "[", seq_len(n_application), "]")
-  # mcmc_samples_thetas <- mcmc_samples[, colnames_theta]
-  mcmc_samples_thetas <- mcmc_samples[, colnames_theta]
+  if (rank_pm) {
+    colnames_theta <- paste0(theta_name, "[", seq_len(n_application), "]")
+    # mcmc_samples_thetas <- mcmc_samples[, colnames_theta]
+    mcmc_samples_thetas <- mcmc_samples[, colnames_theta]
+  }
 
   # Samples of the ranks of the thetas:
   colnames_ranks <- paste0(rank_theta_name, "[", seq_len(n_application), "]")
@@ -166,14 +209,25 @@ get_er_from_jags <-  function(data, id_application,
   ers <- colMeans(mcmc_samples_ranks)
 
   # The results matrix
-  results_rank_posterior_mean <-
-    tibble(id_application = data %>%
-             dplyr::pull(get(id_application)) %>%
-             unique(),
-           # The posterior means of the thetas
-           pm = colMeans(mcmc_samples_thetas)) %>%
-    mutate(rank_pm = rank(-(overall_mean + .data$pm))) # Rank based on the pm
-  results_rank_posterior_mean$er <- ers # Adding the er to results matrix
+  if (rank_pm){
+    results_rank <-
+      tibble(id_application = data %>%
+               dplyr::pull(get(id_application)) %>%
+               unique(),
+             # The posterior means of the thetas and the ers
+             pm = colMeans(mcmc_samples_thetas),
+             er = ers) %>%
+      mutate(rank_pm = rank(-(overall_mean + .data$pm))) %>%
+              # Rank based on the pm
+      select(-.data$pm)
+  } else {
+    results_rank <-
+      tibble(id_application = data %>%
+               dplyr::pull(get(id_application)) %>%
+               unique(),
+             # Adding the er to results matrix
+             er = ers)
+  }
 
   rankings_all <- data %>%
     mutate(num_grade = get(grade_variable)) %>%
@@ -183,13 +237,13 @@ get_er_from_jags <-  function(data, id_application,
     mutate(rank = rank(-.data$avg_grade), # Rank based on the average grade
            # `Rename` the application variable
            id_application = get(id_application)) %>%
-    left_join(results_rank_posterior_mean,
+    select(.data$id_application, .data$rank,
+           .data$avg_grade) %>%
+    left_join(results_rank,
               # Joining the posterior mean and ER results
               by = "id_application") %>%
     # Computation of the percentiles based on ER
-    mutate(pcer = 100 * (.data$er - 0.5) / n_application) %>%
-    select(.data$id_application, .data$rank, .data$rank_pm, .data$er,
-           .data$avg_grade, .data$pcer)
+    mutate(pcer = 100 * (.data$er - 0.5) / n_application)
 
   # Variance of the application effects
   tau2 <-
@@ -213,7 +267,11 @@ get_er_from_jags <-  function(data, id_application,
   variances <- list(tau2 = tau2, tau_voter2 = tau_voter2,
                     sigma2 = sigma2)
   return(list(rankings = rankings_all, rankability = rankability,
-              variances = variances))
+              variances = variances,
+              n_chains = final_n_chains,
+              n_adapt = final_n_adapt,
+              n_burnin = final_n_burnin,
+              n_iter = final_n_iter))
 }
 
 
@@ -229,9 +287,12 @@ get_er_from_jags <-  function(data, id_application,
 #' @param grade_variable the name of the outcome variable
 #' @param path_to_jags_model the path to the jags txt file, if null, the
 #' default model is used. (default = NULL)
-#' @param n_burnin number of burnin iterations
-#' @param n_iter how many iterations used in the JAGS sampler? (default = 5000)
-#' @param n_chains number of chains for the JAGS sampler. (default = 4)
+#' @param n_iter how many iterations used in the JAGS sampler?
+#'  (default = 5000)
+#' @param n_chains number of chains for the JAGS sampler. (default = 2)
+#' @param n_adapt number of iterations discarded for the adaptation phase.
+#'  (default = 1000)
+#' @param n_burnin number of burnin iterations discarded. (default = 1000)
 #' @param id_section name of the section
 #' @param theta_name the name of the application identifier. (default =
 #' application_intercept")
@@ -246,8 +307,21 @@ get_er_from_jags <-  function(data, id_application,
 #' (NULL by default)
 #' @param rank_theta_name the name of the rank of theta in the JAGS model
 #' (default = rank_theta)
+#' @param ordinal_scale dummy variable informing us on whether or not the
+#' outcome is on an ordinal scale (default = FALSE)
+#' @param point_scale integer informing us on the number of points of the
+#' ordinal scale; not needed for continuous scale (default = NULL)
+#' @param heterogeneous_residuals dummy variable informing us on whether or not
+#' the residuals should be heterogeneous (in this case you have to update the
+#' JAGS model too, default = FALSE)
 #' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
+#' @param inits_type type of the initial values, default is "random", but if two
+#' chains are used, the initial values can also be  "overdispersed"
+#' @param initial_values The list of initial values for the jags sampler can be
+#' provided directly
 #' @param seed set a seed for the JAGS model (default = 1991)
+#' @param quiet if the default model is used this function generates a warning.
+#' if quiet = TRUE, this warning is not shown
 #' @import rjags
 #' @return the result is a names vector with the SUCRA of all applications
 #' @examples
@@ -262,16 +336,22 @@ get_er_from_jags <-  function(data, id_application,
 get_sucra <- function(data, id_application, id_voter, grade_variable,
                       path_to_jags_model = NULL,
                       n_chains = 3, n_iter = 5000,
-                      n_burnin = 1000, id_section = NULL,
+                      n_burnin = 1000, n_adapt = 1000,
+                      id_section = NULL,
                       theta_name = "application_intercept",
                       tau_name = "tau_application",
                       tau_voter_name = "tau_voter",
                       tau_section_name = NULL,
                       sigma_name = "sigma",
                       other_variables = NULL,
+                      ordinal_scale = FALSE,
+                      heterogeneous_residuals = FALSE,
+                      point_scale = NULL,
                       rank_theta_name = "rank_theta",
+                      inits_type = "random",
+                      initial_values = NULL,
                       mcmc_samples = NULL,
-                      seed = 1991) {
+                      seed = 1991, quiet = FALSE) {
 
   # Tests:
   ## 1) If no mcmc samples are provided, name of the voter variables is needed:
@@ -307,19 +387,42 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
 
   # If not MCMC samples are provided, they are computed here:
   if (is.null(mcmc_samples)) {
-    mcmc_samples <-
-      get_mcmc_samples(data = data, id_application = id_application,
-                       id_voter = id_voter, grade_variable = grade_variable,
-                       path_to_jags_model = path_to_jags_model,
-                       n_chains = n_chains, n_iter = n_iter,
-                       n_burnin = n_burnin, id_section = id_section,
-                       theta_name = theta_name, tau_name = tau_name,
-                       tau_voter_name = tau_voter_name,
-                       tau_section_name = tau_section_name,
-                       sigma_name = sigma_name,
-                       seed = seed, other_variables = other_variables,
-                       rank_theta_name = rank_theta_name)
+    mcmc_samples <- get_mcmc_samples(data = data,
+                                     id_application = id_application,
+                                     id_voter = id_voter,
+                                     grade_variable = grade_variable,
+                                     path_to_jags_model = path_to_jags_model,
+                                     n_chains = n_chains, n_iter = n_iter,
+                                     n_adapt = n_adapt, n_burnin = n_burnin,
+                                     id_section = id_section,
+                                     theta_name = theta_name,
+                                     tau_name = tau_name,
+                                     tau_voter_name = tau_voter_name,
+                                     tau_section_name = tau_section_name,
+                                     sigma_name = sigma_name,
+                                     other_variables = other_variables,
+                                     rank_theta_name = rank_theta_name,
+                                     ordinal_scale = ordinal_scale,
+                                     point_scale = point_scale,
+                                     heterogeneous_residuals =
+                                       heterogeneous_residuals,
+                                     inits_type = inits_type,
+                                     initial_values = initial_values,
+                                     seed = seed, quiet = quiet)
+  } else {
+    if (length(mcmc_samples) != 6) {
+      stop(paste0("Make sure that the object given to mcmc_samples is an ",
+                  "object that was build with get_mcmc_samples()."))
+    }
   }
+  # Get information out of the mcmc_samples object:
+  final_n_chains <- mcmc_samples$n_chains
+  final_n_adapt <- mcmc_samples$n_adapt
+  final_n_burnin <- mcmc_samples$n_burnin
+  final_n_iter <- mcmc_samples$n_iter
+  if (is.list(mcmc_samples$samples)) {
+    mcmc_samples <- do.call(rbind, mcmc_samples$samples)
+  } else mcmc_samples <- mcmc_samples$samples
 
   # Extract samples of ranks of the thetas:
   colnames_ranks <- paste0(rank_theta_name, "[", seq_len(n_application), "]")
@@ -343,5 +446,9 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
     dplyr::pull(get(id_application)) %>%
     unique()
 
-  return(sucra)
+  return(list(sucra = sucra,
+              n_chains = final_n_chains,
+              n_adapt = final_n_adapt,
+              n_burnin = final_n_burnin,
+              n_iter = final_n_iter))
 }

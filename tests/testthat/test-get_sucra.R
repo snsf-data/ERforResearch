@@ -11,5 +11,5 @@ test_that("The Sucra function gives a named vector as output.", {
                     grade_variable = "num_grade",
                     n_chains = 2, n_iter = 1000,
                     n_burnin = 1000)
-  expect_equal(length(test), n_application)
+  expect_equal(length(test$sucra), n_application)
 })

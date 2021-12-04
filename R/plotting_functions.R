@@ -201,21 +201,41 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 #' (default = "num_grade")
 #' @param path_to_jags_model the path to the jags txt file, if null, the
 #' default model is used. (default = NULL)
-#' @param n_burnin number of burnin iterations
-#' @param n_iter how many iterations used in the JAGS sampler? (default = 5000)
-#' @param n_chains number of chains for the JAGS sampler. (default = 4)
+#' @param n_iter how many iterations used in the JAGS sampler?
+#'  (default = 5000)
+#' @param n_chains number of chains for the JAGS sampler. (default = 2)
+#' @param n_adapt number of iterations discarded for the adaptation phase.
+#'  (default = 1000)
+#' @param n_burnin number of burnin iterations discarded. (default = 1000)
 #' @param id_section name of the section
 #' @param rank_theta_name the name of the rank of theta in the Bayesian model.
 #' (default = rank_theta")
 #' @param theta_name the name of the application identifier. (default =
 #' "application_intercept")
-#' @param tau_name name of the the squareroot of tau, being the precision of the
+#' @param tau_name name of tau in the JAGS model, being the precision of the
 #' random effects, in the jags model. (default = sd_application)
-#' @param tau_voter_name name of the (default = tau_voter)
+#' @param tau_voter_name name of the standard error of the voter effect.
+#' (default = tau_voter)
+#' @param tau_section_name name of the strandard error of the section effect, if
+#' needed (default = NULL).
 #' @param sigma_name name of the standard error of th term (default = sigma)
 #' @param cumulative_rank_prob should the cumulative ranking probabilities be
 #' represented instead
+#' @param ordinal_scale dummy variable informing us on whether or not the
+#' outcome is on an ordinal scale (default = FALSE)
+#' @param point_scale integer informing us on the number of points of the
+#' ordinal scale; not needed for continuous scale (default = NULL)
+#' @param heterogeneous_residuals dummy variable informing us on whether or not
+#' the residuals should be heterogeneous (in this case you have to update the
+#' JAGS model too, default = FALSE)
 #' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
+#' @param inits_type type of the initial values, default is "random", but if two
+#' chains are used, the initial values can also be  "overdispersed"
+#' @param initial_values The list of initial values for the jags sampler can be
+#' provided directly
+#' @param seed set a seed for the JAGS model (default = 1991)
+#' @param quiet if the default model is used this function generates a warning.
+#' if quiet = TRUE, this warning is not shown
 #' @import rjags
 #' @import dplyr
 #' @importFrom utils head
@@ -225,15 +245,23 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 plot_rankogram <- function(data, id_application, id_voter,
                            grade_variable = "num_grade",
                            path_to_jags_model = NULL,
-                           n_chains = 3, n_iter = 5000,
-                           n_burnin = 1000, id_section = NULL,
+                           n_chains = 2, n_iter = 5000,
+                           n_burnin = 1000, n_adapt = 1000,
+                           id_section = NULL,
                            rank_theta_name = "rank_theta",
                            theta_name = "application_intercept",
                            tau_name = "tau_application",
                            tau_voter_name = "tau_voter",
+                           tau_section_name = NULL,
                            sigma_name = "sigma",
                            cumulative_rank_prob = FALSE,
-                           mcmc_samples = NULL) {
+                           ordinal_scale = FALSE,
+                           heterogeneous_residuals = FALSE,
+                           point_scale = NULL,
+                           inits_type = "random",
+                           initial_values = NULL,
+                           mcmc_samples = NULL,
+                           seed = 1991, quiet = FALSE) {
 
   n_application <- data %>%
     dplyr::pull(get(id_application)) %>%
@@ -247,21 +275,46 @@ plot_rankogram <- function(data, id_application, id_voter,
     dplyr::pull(.data$av) %>%
     mean()
 
+  # If no MCMC samples are provided, they are computed here:
   if (is.null(mcmc_samples)) {
-    mcmc_samples <-
-      get_mcmc_samples(data = data, id_application = id_application,
-                       id_voter = id_voter, grade_variable = grade_variable,
-                       path_to_jags_model = path_to_jags_model,
-                       n_chains = n_chains, n_iter = n_iter,
-                       n_burnin = n_burnin, id_section = id_section,
-                       theta_name = theta_name, tau_name = tau_name,
-                       tau_voter_name = tau_voter_name, sigma_name = sigma_name,
-                       rank_theta_name = rank_theta_name)
+    mcmc_samples <- get_mcmc_samples(data = data,
+                                     id_application = id_application,
+                                     id_voter = id_voter,
+                                     grade_variable = grade_variable,
+                                     path_to_jags_model = path_to_jags_model,
+                                     n_chains = n_chains, n_iter = n_iter,
+                                     n_adapt = n_adapt, n_burnin = n_burnin,
+                                     id_section = id_section,
+                                     theta_name = theta_name,
+                                     tau_name = tau_name,
+                                     tau_voter_name = tau_voter_name,
+                                     tau_section_name = tau_section_name,
+                                     sigma_name = sigma_name,
+                                     other_variables = NULL,
+                                     rank_theta_name = rank_theta_name,
+                                     ordinal_scale = ordinal_scale,
+                                     point_scale = point_scale,
+                                     heterogeneous_residuals =
+                                       heterogeneous_residuals,
+                                     inits_type = inits_type,
+                                     initial_values = initial_values,
+                                     seed = seed, quiet = quiet)
+  } else {
+    if (length(mcmc_samples) != 6) {
+      stop(paste0("Make sure that the object given to mcmc_samples is an ",
+                  "object that was build with get_mcmc_samples()."))
+    }
   }
 
   colnames_rank_theta <- paste0(rank_theta_name, "[",
                                 seq_len(n_application), "]")
-  mcmc_samples_rank_thetas <- mcmc_samples[, colnames_rank_theta]
+  if (is.list(mcmc_samples$samples)) {
+    mcmc_samples_rank_thetas <-
+      do.call(rbind, mcmc_samples$samples)[, colnames_rank_theta]
+  } else {
+    mcmc_samples_rank_thetas <-
+      mcmc_samples$samples[, colnames_rank_theta]
+  }
 
   # Calculate the P(j = b) for the SUCRA:
   p_j_b <- matrix(NA, nrow = n_application, ncol = n_application)
@@ -348,8 +401,14 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 
   x <- NULL
 
+
+  if (is.list(get_mcmc_samples_result$samples)) {
+    samples <- do.call(rbind, get_mcmc_samples_result$samples)
+  } else samples <- get_mcmc_samples_result$samples
+
   voter_behavior_colnames <- paste0(name_mean, "[", seq_len(n_voters), "]")
-  voter_behavior_samples <- get_mcmc_samples_result[, voter_behavior_colnames]
+  voter_behavior_samples <- samples[, voter_behavior_colnames]
+
 
   colnames(voter_behavior_samples) <- paste0(names_voters, " ",
                                              seq_len(n_voters))
@@ -438,7 +497,11 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
 
 
   er_colnames <- paste0(name_er_or_theta, "[", seq_len(n_proposals), "]")
-  er_samples <- get_mcmc_samples_result[, er_colnames]
+  if (is.list(get_mcmc_samples_result$samples)) {
+    er_samples <- do.call(rbind, get_mcmc_samples_result$samples)[, er_colnames]
+  } else {
+    er_samples <- get_mcmc_samples_result$samples[, er_colnames]
+  }
 
   if (!is.null(names_proposals)){
     colnames(er_samples) <- names_proposals
@@ -569,3 +632,106 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
 
   plot
 }
+
+
+#' Sankey plot for funding groups
+#'
+#' @param get_mcmc_samples_result output from `get_mcmc_sample()`
+#' @param n_proposals number of proposals in the panel / call
+#' @param name_er_or_theta 	the name of the parameter estimating the ranks (or
+#' the proposal effect) in the Bayesian Hierarchical model
+#' (default = "rank_theta").
+#' @param er if TRUE then, the ER are plotted, otherwise the thetas (the
+#' proposal effects) are plotted. (default = TRUE)
+#' @param title title of the plot (default = NULL, no title).
+#' @param number_fundable number of proposals that can be funded.
+#' @param raw_data raw long data with individual votes and numeric grade
+#' @param num_grade_variable name of numeric grade in raw_data
+#' @param id_proposal name of proposal / applicant identifier
+#' @param colors vector with colors, default = color blind.
+#'
+#' @import ggalluvial
+#' @import scales
+#' @import forcats
+#'
+#' @return A plot (similar to Sankey plot)
+#' @export
+#'
+get_sankey_plot_br <- function(get_mcmc_samples_result, n_proposals,
+                               raw_data, num_grade_variable = "num_grade",
+                               id_proposal,
+                               name_er_or_theta = "rank_theta",
+                               er = TRUE, title = NULL,
+                               number_fundable = NULL, colors = NULL) {
+
+  # Colorblind palette
+  if (is.null(colors)) {
+    colors <- c("#E69F00", "#56B4E9", "#009E73")
+    names(colors) <- c("accepted", "rejected", "random selection")
+    }
+  # Get the correct data
+  data_for_plot <- plot_er_distributions(get_mcmc_samples_result,
+                                         n_proposals = n_proposals,
+                                         name_er_or_theta = name_er_or_theta,
+                                         names_proposals = NULL,
+                                         number_fundable = number_fundable,
+                                         proposal = "Proposal ")$data
+
+  t <- distinct(raw_data[, id_proposal])[[1]]
+  names(t) <- paste0("Proposal ", seq_len(n_proposals))
+  fu <- function(name) {
+    unique(names(t)[which(t == name)])
+  }
+
+  data_for_plot <- data_for_plot %>%
+    select(.data$parameter, .data$m, .data$rs) %>%
+    left_join(raw_data %>%
+                rename(id_proposal = id_proposal) %>%
+                group_by(id_proposal) %>%
+                mutate(id_proposal = fu(id_proposal)) %>%
+                summarise(avg = mean(.data$num_grade, na.rm = FALSE)) %>%
+                ungroup() %>%
+                arrange(-.data$avg) %>%
+                mutate(rs_avg = c(rep("accepted", number_fundable),
+                                  rep("rejected",
+                                      n_proposals - number_fundable)),
+                       # rs_avg = ifelse(id_proposal == "Proposal 15", "accepted", rs_avg),
+                       rank_avg = 1:n_proposals) %>%
+                select(-.data$avg),
+              by = c("parameter" = "id_proposal")) %>%
+    pivot_longer(c(.data$rs, .data$rs_avg),
+                 values_to = "group", names_to = "stage")
+
+  stratum_list <- data_for_plot %>%
+    mutate(stage = factor(stage, levels = c("rs_avg", "rs")),
+           group =
+             fct_rev(factor(.data$group, levels = c("accepted",
+                                                    "random selection",
+                                                    "rejected")))) %>%
+    count(stage, .data$group) %>%
+    mutate(strat = paste0(.data$group, " (", n, ")"))
+
+  data_for_plot %>%
+    mutate(stage = factor(stage, levels = c("rs_avg", "rs")),
+           group =
+             factor(.data$group, levels = c("accepted", "random selection",
+                                       "rejected"))) %>%
+    ggplot(aes(x = stage, stratum = .data$group,
+               alluvium = .data$parameter,
+               fill = .data$group)) +
+    geom_flow() +
+    geom_stratum(width = 1/3, fill = "white", color = "grey") +
+    geom_text(stat = "stratum", label = stratum_list$strat) +
+    scale_x_discrete(labels = c("Rank based on Average",
+                                "Bayesian Ranking"),
+                     expand = c(0.15, 0.15)) +
+    scale_fill_manual(values = colors) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          panel.grid.major.x = element_blank(),
+          axis.text.y = element_blank())  +
+    labs(title = NULL, x = NULL, y = NULL)
+}
+

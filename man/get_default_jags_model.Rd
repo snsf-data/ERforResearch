@@ -30,9 +30,10 @@ certain path.
 The model defined here has a random component for the application /
 the proposal and the voter / the evaluator. There is no other grouping
 variable defined, as for example a section or panel. The user is invited to
-write their own model definition if more flexibility is needed. However, the
+write their own model definition if more flexibility is needed. The path to
+the latter can then be given as parameter to get_mcmc_samples. However, the
 user can decide between a continuous or ordinal outcome variable, and
-homogeneous or heterogenous residuals.
+homogeneous or heterogeneous residuals (those options are integrated).
 }
 \examples{
 # The model definition .txt is stored in the file "default_jags_model.txt"

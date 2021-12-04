@@ -11,9 +11,11 @@ get_mcmc_samples(
   grade_variable,
   path_to_jags_model = NULL,
   n_chains = 2,
-  n_iter = 10000,
-  n_burnin = 5000,
+  n_iter = 5000,
+  n_burnin = 1000,
+  n_adapt = 1000,
   id_section = NULL,
+  max_iter = 1e+06,
   theta_name = "application_intercept",
   tau_name = "tau_application",
   sigma_name = "sigma",
@@ -26,7 +28,11 @@ get_mcmc_samples(
   other_variables = NULL,
   seed = 1991,
   quiet = FALSE,
-  dont_bind = FALSE
+  dont_bind = FALSE,
+  inits_type = "random",
+  variables_to_sample = "default",
+  names_variables_to_sample = NULL,
+  initial_values = NULL
 )
 }
 \arguments{
@@ -42,14 +48,19 @@ defined below.}
 \item{path_to_jags_model}{the path to the jags txt file, if null, the
 default model is used. (default = NULL)}
 
-\item{n_chains}{number of chains for the JAGS sampler. (default = 4)}
+\item{n_chains}{number of chains for the JAGS sampler. (default = 2)}
 
 \item{n_iter}{how many iterations used in the JAGS sampler?
 (default = 5000)}
 
-\item{n_burnin}{number of burnin iterations}
+\item{n_burnin}{number of burnin iterations discarded. (default = 1000)}
+
+\item{n_adapt}{number of iterations discarded for the adaptation phase.
+(default = 1000)}
 
 \item{id_section}{name of the section}
+
+\item{max_iter}{maximum number of iteration (default = 1 million)}
 
 \item{theta_name}{the name of the application identifier in the JAGS model.
 (default = application_intercept")}
@@ -91,12 +102,34 @@ if quiet = TRUE, this warning is not shown}
 
 \item{dont_bind}{if TRUE the different chains are not pooled, and the MCMC
 object is returned as it is.}
+
+\item{inits_type}{type of the initial values, default is "random", but if two
+chains are used, the initial values can also be  "overdispersed"}
+
+\item{variables_to_sample}{should the default variables be samples, or will
+they be "specified" (in names_variables_to_sample), default is "default".}
+
+\item{names_variables_to_sample}{if variables to sample are specified, write
+their names here, as a character-vector, default is NULL.}
+
+\item{initial_values}{The list of initial values for the jags sampler can be
+provided directly}
 }
 \value{
 matrix with the samples for all parameters defined in the model.
 }
 \description{
-Helper function to get the mcmc samples
+Helper function to get the mcmc samples. The function tests convergence
+diagnostics at the same time. Find more in Details.
+}
+\details{
+Note that a convergence test is applied in this function: If with
+the specified length of adaptation and burnin phase together with the number
+of specified iterations not all Rhat values are below 1.1, the latter Ns
+(n_adapt, n_burnin, and n_iter) are multiplied by 2, 4, 6, 10 and 15,
+until either all Rhat values are below 1.1 or the loop was repeated 5 times
+(e.g. times 15). If the Rhat values are still not all small enough a warning
+message is printed.
 }
 \examples{
 data_panel1 <- get_mock_data() \%>\%
