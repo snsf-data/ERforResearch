@@ -18,7 +18,7 @@ ordinal. (default = "continuous")}
 \item{residuals}{the nature of the residuals in the model: homogeneous or
 heterogeneous. (default = "homogeneous")}
 
-\item{path}{where should it be stored, from here()? (default = jags_model.txt)}
+\item{path}{where should it be stored, from getwd()? (default = jags_model.txt)}
 
 \item{quiet}{if TRUE, do not show messages.}
 }

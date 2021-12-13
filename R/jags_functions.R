@@ -13,9 +13,8 @@ options(dplyr.summarise.inform = FALSE)
 #' ordinal. (default = "continuous")
 #' @param residuals the nature of the residuals in the model: homogeneous or
 #' heterogeneous. (default = "homogeneous")
-#' @param path where should it be stored, from here()? (default = jags_model.txt)
+#' @param path where should it be stored, from getwd()? (default = jags_model.txt)
 #' @param quiet if TRUE, do not show messages.
-#' @import here
 #' @details The model defined here has a random component for the application /
 #' the proposal and the voter / the evaluator. There is no other grouping
 #' variable defined, as for example a section or panel. The user is invited to
@@ -75,7 +74,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
       inv_tau_voter2 <- pow(tau_voter, -2)
       tau_voter ~ dunif(0.000001, 2)
       }",
-        file = here(path))
+        file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "homogeneous"){
     cat("model{
@@ -112,7 +111,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
       tau_application ~ dunif(0.000001, 2)
       inv_tau_voter2 <- pow(tau_voter, -2)
       tau_voter ~ dunif(0.000001, 2)
-    }", file = here(path))
+    }", file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "continuous" & residuals == "heterogeneous"){
     cat("model{
@@ -152,7 +151,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
       alpha ~ dnorm(0, 0.01)
       beta ~ dnorm(0, 0.01)
       }",
-        file = here(path))
+        file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "heterogeneous"){
     cat("model{
@@ -195,7 +194,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 
       alpha ~ dnorm(0, 0.01)
       beta ~ dnorm(0, 0.01)
-    }", file = here(path))
+    }", file = paste0(getwd(), "/", path))
   }
 }
 
@@ -339,7 +338,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
         }
       }
     }
-    path_to_jags_model <- here("default_jags_model.txt")
+    path_to_jags_model <- paste0(getwd(), "/", "default_jags_model.txt")
     if (!quiet)
       print("Default model is used (check get_default_jags_model function!).")
   }

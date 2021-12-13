@@ -86,7 +86,8 @@ plotting_er_results <- function(er_results, rankability = TRUE,
                                 hjust_y_axis = 1.5) {
 
   # Colorblind palette
-  if (is.null(colors)) colors <- c("#E69F00", "#56B4E9", "#009E73", "#0072B2",
+  if (is.null(colors)) colors <- c("#E69F00", "#56B4E9",
+                                   "#009E73", "#0072B2",
                                    "#D55E00", "#CC79A7")
 
   # Gather the data needed for the plot:
@@ -603,7 +604,8 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                    size = size_inner, alpha = alpha_inner) +
       geom_point(aes(y = .data$m, x = .data$parameter),
                  size = size_pt, color = "darkblue") +
-      scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
+      scale_color_manual(values = c("#E69F00", "#56B4E9",
+                                    "#7f36c4")) + #, "#009E73")) +
       labs(y = ylab, title = title) +
       theme_minimal() +
       theme(panel.grid.major.y = element_blank(),
