@@ -17,6 +17,7 @@ plot_rankogram(
   id_section = NULL,
   rank_theta_name = "rank_theta",
   theta_name = "application_intercept",
+  voter_name = "voter_intercept",
   tau_name = "tau_application",
   tau_voter_name = "tau_voter",
   tau_section_name = NULL,
@@ -63,6 +64,9 @@ default model is used. (default = NULL)}
 
 \item{theta_name}{the name of the application identifier. (default =
 "application_intercept")}
+
+\item{voter_name}{the name of the voter intercept in the JAGS model (default
+= voter_intercept).}
 
 \item{tau_name}{name of tau in the JAGS model, being the precision of the
 random effects, in the jags model. (default = sd_application)}

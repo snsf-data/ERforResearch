@@ -79,3 +79,18 @@ credible intervals
 This function plots the expected ranks of all proposals together with
 their xy% credible intervals.
 }
+\examples{
+data_panel1 <- get_mock_data() \%>\%
+     filter(panel == "p1")
+\dontrun{
+mcmc_samples <- get_mcmc_samples(data = data_panel1,
+                                 id_application = "application",
+                                 id_voter = "voter",
+                                 grade_variable = "num_grade")
+plot_er_distributions(mcmc_samples_object,
+                      n_proposals = data_panel1 \%>\%
+                           summarise(n = n_distinct(application)) \%>\%
+                           pull(),
+                      number_fundable = 5)
+                      }
+}

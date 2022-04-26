@@ -1,5 +1,25 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# ERforResearch 3.0.0.9000
+
+* nothing to add
+
+
+# ERforResearch 3.0.0
+
+Include Reviewer comments:  
+
+- changed name of `get_inits_overdispersed_two_chains()` to `get_inits_overdispersed_four_chains()` and implemented the new default of **four** chains with different RNGs.  
+- `get_mcmc_samples()` function defaulted to four chains with four different samplers and fixed (random but dependent on seed) starting values.  
+- updated the test of `get_mcmc_samples()` function:  
+  - changed Rhat threshold to 1.01 instead of 1.1  
+  - update the updating loop (the multiplier of n.adapt, burnin and iterations)  
+- the `get_max_rhat()` function was deleted  
+- added option to compute effective sample size and MCMC error in `get_mcmc_sample()`    
+- the default variables in `get_mcmc_sample()` were changed to being able to sample from all the models discussed in the paper (Heyard et al (2021)), with the default model  
+- rankability computation etc was deleted an documentation of `get_er_from_jags()` updated
+
+
 # ERforResearch 2.0.0
 
 - add max_iter option in `get_er_form_jags()`

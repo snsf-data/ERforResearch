@@ -25,24 +25,21 @@
 #' @param max_iter maximum number of iteration (default = 1 million)
 #' @param id_section name of the section
 #' @param theta_name the name of the application identifier in the JAGS model.
-#' (default = application_intercept")
+#' (default = application_intercept").
+#' @param rank_theta_name the name of the rank of theta in the JAGS model
+#' (default = rank_theta).
+#' @param voter_name the name of the voter intercept in the JAGS model (default
+#' = voter_intercept).
 #' @param tau_name name of the tau in the jags model, being the standard error
-#' of the application effects. This variable is needed for the computation of
-#' the rankability. (default = tau_application)
+#' of the application effects (default = tau_application).
 #' @param tau_name name of the tau in the jags model, being the standard error
-#' of the application effects. This variable is needed for the computation of
-#' the rankability. (default = tau_application)
-#' @param tau_voter_name name of the standard error of the voter effect. This
-#' variable is needed for the computation of the rankability.
-#' (default = tau_voter)
+#' of the application effects (default = tau_application).
+#' @param tau_voter_name name of the standard error of the voter effect
+#' (default = tau_voter).
 #' @param tau_section_name name of the standard error of the section effect, if
 #' needed (default = NULL).
 #' @param sigma_name name of the standard deviation of the full model.
 #' (default = sigma)
-#' @param other_variables are there other variables we would like to extract
-#' from the JAGS model samples? (NULL by default)
-#' @param rank_theta_name the name of the rank of theta in the JAGS model
-#' (default = rank_theta)
 #' @param rank_pm should the rank based on the posterior mean by computed?
 #' default = TRUE
 #' @param ordinal_scale dummy variable informing us on whether or not the
@@ -64,12 +61,27 @@
 #' their names here, as a character-vector, default is NULL.
 #' @param seed set a seed for the JAGS model (default = 1991)
 #' @param quiet if the default model is used this function generates a warning.
-#' if quiet = TRUE, this warning is not shown
+#' if quiet = TRUE, this warning is not shown.
+#' @param compute_ess Should the effective sample size and the mcmc errors be
+#' calculated? (default = FALSE).
+#'
 #' @import rjags
 #' @import dplyr
-#' @return the result is a list with the 1) ranked applications with their
-#' expected rank and pcer, 2) the rankability and 3) the estimates of the
-#' variances.
+#' @return the result is a list with the
+#'
+#' 1) a table with the ranked proposals:
+#' id_application is the unique identifier of the proposal/application. rank is
+#' the simplistic rank based on the average of the individual votes, avg_grade.
+#' er is the expected rank. rank_pm is the rank of the posterior mean and pcer
+#' is the percentile based on er.
+#'
+#' 2) the number of chains (n_chains), the number of adaptive iterations
+#' (n_adapt), the number of burnin iterations (n_burnin), and the final number
+#' of iterations actually samples (n_iter).
+#'
+#' 3) the effective sample size (ess) of all relevant parameters and the
+#' MCMC error (mcmc_error) of the same parameters.
+#'
 #' @export
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
@@ -80,7 +92,17 @@
 #'                                id_voter = "voter",
 #'                                grade_variable = "num_grade",
 #'                                path_to_jags_model = NULL)
-#'                                }
+#' # OR, by giving an mcmc object into the function
+#' mcmc_samples <- get_mcmc_samples(data = data_panel1,
+#'                                  id_application = "application",
+#'                                  id_voter = "voter",
+#'                                  grade_variable = "num_grade")
+#' ER_results <- get_er_from_jags(data = data_panel1,
+#'                               id_application = "application",
+#'                               id_voter = "voter",
+#'                               grade_variable = "num_grade",
+#'                               mcmc_samples = mcmc_samples)
+#' }
 get_er_from_jags <-  function(data, id_application,
                               id_voter = NULL,
                               grade_variable,
@@ -90,13 +112,13 @@ get_er_from_jags <-  function(data, id_application,
                               max_iter = 1000000,
                               id_section = NULL,
                               theta_name = "application_intercept",
+                              voter_name = "voter_intercept",
                               tau_name = "tau_application",
                               tau_voter_name = "tau_voter",
                               tau_section_name = NULL,
                               sigma_name = "sigma",
                               rank_theta_name = "rank_theta",
                               rank_pm = TRUE,
-                              other_variables = NULL,
                               ordinal_scale = FALSE,
                               heterogeneous_residuals = FALSE,
                               point_scale = NULL,
@@ -106,7 +128,8 @@ get_er_from_jags <-  function(data, id_application,
                               variables_to_sample = "default",
                               names_variables_to_sample = NULL,
                               seed = 1991,
-                              quiet = FALSE) {
+                              quiet = FALSE,
+                              compute_ess = FALSE) {
 
   # Tests:
   ## 1) If no mcmc samples are provided, name of the voter variables is needed:
@@ -161,12 +184,12 @@ get_er_from_jags <-  function(data, id_application,
                                      max_iter = max_iter,
                                      id_section = id_section,
                                      theta_name = theta_name,
+                                     rank_theta_name = rank_theta_name,
+                                     voter_name = voter_name,
                                      tau_name = tau_name,
                                      tau_voter_name = tau_voter_name,
                                      tau_section_name = tau_section_name,
                                      sigma_name = sigma_name,
-                                     other_variables = other_variables,
-                                     rank_theta_name = rank_theta_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
                                      heterogeneous_residuals =
@@ -176,9 +199,10 @@ get_er_from_jags <-  function(data, id_application,
                                      variables_to_sample = variables_to_sample,
                                      names_variables_to_sample =
                                        names_variables_to_sample,
-                                     seed = seed, quiet = quiet)
+                                     seed = seed, quiet = quiet,
+                                     compute_ess = compute_ess)
   } else {
-    if (length(mcmc_samples) != 6) {
+    if (length(mcmc_samples) != 8) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }
@@ -188,6 +212,8 @@ get_er_from_jags <-  function(data, id_application,
   final_n_adapt <- mcmc_samples$n_adapt
   final_n_burnin <- mcmc_samples$n_burnin
   final_n_iter <- mcmc_samples$n_iter
+  ess <- mcmc_samples$ess
+  mcmc_error <- mcmc_samples$mcmc_error
   if (is.list(mcmc_samples$samples)) {
     mcmc_samples <- do.call(rbind, mcmc_samples$samples)
   } else mcmc_samples <- mcmc_samples$samples
@@ -245,34 +271,14 @@ get_er_from_jags <-  function(data, id_application,
     # Computation of the percentiles based on ER
     mutate(pcer = 100 * (.data$er - 0.5) / n_application)
 
-  # Variance of the application effects
-  tau2 <-
-    mean(mcmc_samples[, which(colnames(mcmc_samples) == tau_name)])**2
-  # Variance of the voter effects
-  tau_voter2 <-
-    mean(mcmc_samples[, which(colnames(mcmc_samples) == tau_voter_name)])**2
-  # Model variance
-  sigma2 <-
-    mean(mcmc_samples[, which(colnames(mcmc_samples) == sigma_name)])**2
-
-  # Computation of the Rankability
-  rankability <- tau2 / (tau2 + tau_voter2 + sigma2)
-  if (!is.null(id_section)){
-    # Variance of the section effect, if needed
-    tau_section2 <-
-      mean(mcmc_samples[, which(colnames(mcmc_samples) == tau_section_name)])**2
-    rankability <- tau2 / (tau2 + tau_voter2 + sigma2 + tau_section2)
-  }
-
-  variances <- list(tau2 = tau2, tau_voter2 = tau_voter2,
-                    sigma2 = sigma2)
-  return(list(rankings = rankings_all, rankability = rankability,
-              variances = variances,
+  return(list(rankings = rankings_all,
               n_chains = final_n_chains,
               n_adapt = final_n_adapt,
               n_burnin = final_n_burnin,
-              n_iter = final_n_iter))
-}
+              n_iter = final_n_iter,
+              ess = ess,
+              mcmc_error = mcmc_error))
+  }
 
 
 
@@ -303,8 +309,6 @@ get_er_from_jags <-  function(data, id_application,
 #' needed (default = NULL).
 #' @param sigma_name name of the standard deviation of the full model.
 #' (default = sigma)
-#' @param other_variables are there other variables we would like to extract?
-#' (NULL by default)
 #' @param rank_theta_name the name of the rank of theta in the JAGS model
 #' (default = rank_theta)
 #' @param ordinal_scale dummy variable informing us on whether or not the
@@ -343,7 +347,6 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
                       tau_voter_name = "tau_voter",
                       tau_section_name = NULL,
                       sigma_name = "sigma",
-                      other_variables = NULL,
                       ordinal_scale = FALSE,
                       heterogeneous_residuals = FALSE,
                       point_scale = NULL,
@@ -400,7 +403,6 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
                                      tau_voter_name = tau_voter_name,
                                      tau_section_name = tau_section_name,
                                      sigma_name = sigma_name,
-                                     other_variables = other_variables,
                                      rank_theta_name = rank_theta_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
@@ -410,7 +412,7 @@ get_sucra <- function(data, id_application, id_voter, grade_variable,
                                      initial_values = initial_values,
                                      seed = seed, quiet = quiet)
   } else {
-    if (length(mcmc_samples) != 6) {
+    if (length(mcmc_samples) != 8) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }

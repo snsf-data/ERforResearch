@@ -6,7 +6,6 @@
 \usage{
 plotting_er_results(
   er_results,
-  rankability = TRUE,
   id_application = "id_application",
   how_many_fundable = NULL,
   title = "",
@@ -38,9 +37,6 @@ plotting_er_results(
 }
 \arguments{
 \item{er_results}{the resulting object from the `get_er_from_jags()` function}
-
-\item{rankability}{Do we want the rankability written in the plot title
-(default = TRUE)}
 
 \item{id_application}{the name of the variable giving the distinct
 application identifiers. (default = id_application)}

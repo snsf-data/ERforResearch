@@ -17,13 +17,13 @@ get_er_from_jags(
   max_iter = 1e+06,
   id_section = NULL,
   theta_name = "application_intercept",
+  voter_name = "voter_intercept",
   tau_name = "tau_application",
   tau_voter_name = "tau_voter",
   tau_section_name = NULL,
   sigma_name = "sigma",
   rank_theta_name = "rank_theta",
   rank_pm = TRUE,
-  other_variables = NULL,
   ordinal_scale = FALSE,
   heterogeneous_residuals = FALSE,
   point_scale = NULL,
@@ -33,7 +33,8 @@ get_er_from_jags(
   variables_to_sample = "default",
   names_variables_to_sample = NULL,
   seed = 1991,
-  quiet = FALSE
+  quiet = FALSE,
+  compute_ess = FALSE
 )
 }
 \arguments{
@@ -66,15 +67,16 @@ default model is used. (default = NULL)}
 \item{id_section}{name of the section}
 
 \item{theta_name}{the name of the application identifier in the JAGS model.
-(default = application_intercept")}
+(default = application_intercept").}
+
+\item{voter_name}{the name of the voter intercept in the JAGS model (default
+= voter_intercept).}
 
 \item{tau_name}{name of the tau in the jags model, being the standard error
-of the application effects. This variable is needed for the computation of
-the rankability. (default = tau_application)}
+of the application effects (default = tau_application).}
 
-\item{tau_voter_name}{name of the standard error of the voter effect. This
-variable is needed for the computation of the rankability.
-(default = tau_voter)}
+\item{tau_voter_name}{name of the standard error of the voter effect
+(default = tau_voter).}
 
 \item{tau_section_name}{name of the standard error of the section effect, if
 needed (default = NULL).}
@@ -83,13 +85,10 @@ needed (default = NULL).}
 (default = sigma)}
 
 \item{rank_theta_name}{the name of the rank of theta in the JAGS model
-(default = rank_theta)}
+(default = rank_theta).}
 
 \item{rank_pm}{should the rank based on the posterior mean by computed?
 default = TRUE}
-
-\item{other_variables}{are there other variables we would like to extract
-from the JAGS model samples? (NULL by default)}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
 outcome is on an ordinal scale (default = FALSE)}
@@ -119,12 +118,26 @@ their names here, as a character-vector, default is NULL.}
 \item{seed}{set a seed for the JAGS model (default = 1991)}
 
 \item{quiet}{if the default model is used this function generates a warning.
-if quiet = TRUE, this warning is not shown}
+if quiet = TRUE, this warning is not shown.}
+
+\item{compute_ess}{Should the effective sample size and the mcmc errors be
+calculated? (default = FALSE).}
 }
 \value{
-the result is a list with the 1) ranked applications with their
-expected rank and pcer, 2) the rankability and 3) the estimates of the
-variances.
+the result is a list with the
+
+1) a table with the ranked proposals:
+id_application is the unique identifier of the proposal/application. rank is
+the simplistic rank based on the average of the individual votes, avg_grade.
+er is the expected rank. rank_pm is the rank of the posterior mean and pcer
+is the percentile based on er.
+
+2) the number of chains (n_chains), the number of adaptive iterations
+(n_adapt), the number of burnin iterations (n_burnin), and the final number
+of iterations actually samples (n_iter).
+
+3) the effective sample size (ess) of all relevant parameters and the
+MCMC error (mcmc_error) of the same parameters.
 }
 \description{
 This function computes the ER via JAGS
@@ -138,5 +151,15 @@ ER_results <- get_er_from_jags(data = data_panel1,
                                id_voter = "voter",
                                grade_variable = "num_grade",
                                path_to_jags_model = NULL)
-                               }
+# OR, by giving an mcmc object into the function
+mcmc_samples <- get_mcmc_samples(data = data_panel1,
+                                 id_application = "application",
+                                 id_voter = "voter",
+                                 grade_variable = "num_grade")
+ER_results <- get_er_from_jags(data = data_panel1,
+                              id_application = "application",
+                              id_voter = "voter",
+                              grade_variable = "num_grade",
+                              mcmc_samples = mcmc_samples)
+}
 }

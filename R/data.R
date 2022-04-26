@@ -5,7 +5,9 @@
 #' @details  A = 6, AB = 5, B = 4, BC = 3, C = 2, D = 1. All other grades (COI,
 #' etc) are transformed to NA.
 #' @export
+#' @import stringr
 get_num_grade_snsf <- function(grade) {
+  grade <- str_trim(grade)
   return(
     case_when(grade == "A" ~ 6,
               grade == "AB" ~ 5,

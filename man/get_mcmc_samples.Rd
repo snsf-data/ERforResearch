@@ -10,7 +10,7 @@ get_mcmc_samples(
   id_voter,
   grade_variable,
   path_to_jags_model = NULL,
-  n_chains = 2,
+  n_chains = 4,
   n_iter = 5000,
   n_burnin = 1000,
   n_adapt = 1000,
@@ -20,19 +20,21 @@ get_mcmc_samples(
   tau_name = "tau_application",
   sigma_name = "sigma",
   tau_voter_name = "tau_voter",
-  tau_section_name = NULL,
+  tau_section_name = "tau_section",
+  rank_theta_name = "rank_theta",
+  voter_name = "voter_intercept",
   ordinal_scale = FALSE,
   point_scale = NULL,
   heterogeneous_residuals = FALSE,
-  rank_theta_name = "rank_theta",
-  other_variables = NULL,
   seed = 1991,
   quiet = FALSE,
   dont_bind = FALSE,
   inits_type = "random",
   variables_to_sample = "default",
   names_variables_to_sample = NULL,
-  initial_values = NULL
+  initial_values = NULL,
+  compute_ess = FALSE,
+  maximal_testing = FALSE
 )
 }
 \arguments{
@@ -48,7 +50,9 @@ defined below.}
 \item{path_to_jags_model}{the path to the jags txt file, if null, the
 default model is used. (default = NULL)}
 
-\item{n_chains}{number of chains for the JAGS sampler. (default = 2)}
+\item{n_chains}{number of chains for the JAGS sampler. The default number of
+chains is set to four. This creates optimal conditions and should not be
+changed.}
 
 \item{n_iter}{how many iterations used in the JAGS sampler?
 (default = 5000)}
@@ -66,18 +70,22 @@ default model is used. (default = NULL)}
 (default = application_intercept")}
 
 \item{tau_name}{name of the tau in the jags model, being the standard error
-of the application effects. This variable is needed for the computation of
-the rankability. (default = tau_application)}
+of the application effects (default = tau_application).}
 
 \item{sigma_name}{name of the standard deviation of the full model.
 (default = sigma)}
 
-\item{tau_voter_name}{name of the standard error of the voter effect. This
-variable is needed for the computation of the rankability
-(default = tau_voter)}
+\item{tau_voter_name}{name of the standard error of the voter effect
+(default = tau_voter).}
 
 \item{tau_section_name}{name of the standard error of the section effect, if
-needed}
+needed (default = tau_section).}
+
+\item{rank_theta_name}{the name of the rank of theta in the JAGS model
+(default = rank_theta)}
+
+\item{voter_name}{the name of the voter intercept in the JAGS model (default
+= voter_intercept).}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
 outcome is on an ordinal scale (default = FALSE)}
@@ -89,19 +97,13 @@ ordinal scale; not needed for continuous scale (default = NULL)}
 the residuals should be heterogeneous (in this case you have to update the
 JAGS model too, default = FALSE)}
 
-\item{rank_theta_name}{the name of the rank of theta in the JAGS model
-(default = rank_theta)}
-
-\item{other_variables}{are there other variables we would like to extract?
-(NULL by default)}
-
 \item{seed}{set a seed for the JAGS model (default = 1991)}
 
 \item{quiet}{if the default model is used this function generates a warning.
 if quiet = TRUE, this warning is not shown}
 
 \item{dont_bind}{if TRUE the different chains are not pooled, and the MCMC
-object is returned as it is.}
+object is returned as it is (default = FALSE).}
 
 \item{inits_type}{type of the initial values, default is "random", but if two
 chains are used, the initial values can also be  "overdispersed"}
@@ -114,9 +116,22 @@ their names here, as a character-vector, default is NULL.}
 
 \item{initial_values}{The list of initial values for the jags sampler can be
 provided directly}
+
+\item{compute_ess}{Should the effective sample size and the mcmc errors be
+calculated? (default = FALSE)}
+
+\item{maximal_testing}{should the rhat of all parameters be computed (TRUE),
+or just the essential ones (FALSE)? (default = FALSE)}
 }
 \value{
-matrix with the samples for all parameters defined in the model.
+The function returns a list with: a matrix with the samples for all
+ parameters defined in the model, and more information on the number of
+ chains, and the length of the adaptation, iteration and burnin phase, and
+ an indicator on whether or not the chains converged (according to Rhat being
+ smaller than 1.01.). Note that n_iter, burnin, adapt are the number per
+ chain. Then, optionally the effective sample size (ess) for the relevant
+ parameters is calculated as well as the MCMC error
+ (= sd(parameter)/sqrt(ess)) and added to the list.
 }
 \description{
 Helper function to get the mcmc samples. The function tests convergence
@@ -125,11 +140,11 @@ diagnostics at the same time. Find more in Details.
 \details{
 Note that a convergence test is applied in this function: If with
 the specified length of adaptation and burnin phase together with the number
-of specified iterations not all Rhat values are below 1.1, the latter Ns
-(n_adapt, n_burnin, and n_iter) are multiplied by 2, 4, 6, 10 and 15,
-until either all Rhat values are below 1.1 or the loop was repeated 5 times
-(e.g. times 15). If the Rhat values are still not all small enough a warning
-message is printed.
+of specified iterations not all Rhat values are below 1.01, the latter Ns
+(n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5, 10, 5x10,
+10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are below 1.01
+or the number of iteration would exceed max_iter. If the Rhat values are
+still not all small enough a warning message is printed.
 }
 \examples{
 data_panel1 <- get_mock_data() \%>\%
