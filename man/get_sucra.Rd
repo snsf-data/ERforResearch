@@ -20,7 +20,6 @@ get_sucra(
   tau_voter_name = "tau_voter",
   tau_section_name = NULL,
   sigma_name = "sigma",
-  other_variables = NULL,
   ordinal_scale = FALSE,
   heterogeneous_residuals = FALSE,
   point_scale = NULL,
@@ -70,9 +69,6 @@ needed (default = NULL).}
 
 \item{sigma_name}{name of the standard deviation of the full model.
 (default = sigma)}
-
-\item{other_variables}{are there other variables we would like to extract?
-(NULL by default)}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
 outcome is on an ordinal scale (default = FALSE)}

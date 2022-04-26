@@ -9,7 +9,7 @@ test_that("The Sucra function gives a named vector as output.", {
                     id_application = "application",
                     id_voter = "voter",
                     grade_variable = "num_grade",
-                    n_chains = 2, n_iter = 1000,
-                    n_burnin = 1000)
+                    n_chains = 4, n_iter = 10000, n_adapt = 10000,
+                    n_burnin = 10000)
   expect_equal(length(test$sucra), n_application)
 })

@@ -6,7 +6,9 @@
 \usage{
 get_default_jags_model(
   outcome_variable = "continuous",
+  nine_point_scale_continuous = FALSE,
   residuals = "homogeneous",
+  subsections = FALSE,
   path = "default_jags_model.txt",
   quiet = FALSE
 )
@@ -15,8 +17,14 @@ get_default_jags_model(
 \item{outcome_variable}{the nature of the outcome variable: continuous or
 ordinal. (default = "continuous")}
 
+\item{nine_point_scale_continuous}{only needed if nine-point continuous scale
+is used (default = FALSE).}
+
 \item{residuals}{the nature of the residuals in the model: homogeneous or
 heterogeneous. (default = "homogeneous")}
+
+\item{subsections}{the individual votes come from different sub-panels that
+need to be merged. (default = FALSE)}
 
 \item{path}{where should it be stored, from getwd()? (default = jags_model.txt)}
 
@@ -28,12 +36,13 @@ certain path.
 }
 \details{
 The model defined here has a random component for the application /
-the proposal and the voter / the evaluator. There is no other grouping
-variable defined, as for example a section or panel. The user is invited to
-write their own model definition if more flexibility is needed. The path to
-the latter can then be given as parameter to get_mcmc_samples. However, the
-user can decide between a continuous or ordinal outcome variable, and
-homogeneous or heterogeneous residuals (those options are integrated).
+the proposal and the voter / the evaluator. If the parameter subpanels is set
+to TRUE an addtional grouping for the section or panel is defined. The user
+is invited to write their own model definition if more flexibility is needed.
+The path to the latter can then be given as parameter to get_mcmc_samples.
+The user can however already decide between a continuous or ordinal outcome
+variable, homogeneous or heterogeneous residuals, and with or without
+subpanel merging (those options are integrated).
 }
 \examples{
 # The model definition .txt is stored in the file "default_jags_model.txt"

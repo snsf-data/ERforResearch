@@ -1,13 +1,13 @@
 Package: ERforResearch
 Type: Package
 Title: Expected Rank for Research Evaluation
-Version: 2.0.0
+Version: 3.0.0.9000
 Authors@R:
     c(person(given = "Rachel",
              family = "Heyard",
              role = c("aut", "cre"),
              email = "rachel.heyard@snf.ch"))
-Description: Implementation of the functionalities to use the expected ranks in the context of research evaluation.
+Description: This package implements the functionality to use the expected ranks (ER) in the context of research evaluation as presented in a recent preprint (https://arxiv.org/abs/2102.09958). For a demonstration of the major functions check out the vignette (Demo ERforResearch).
 Encoding: UTF-8
 Imports: bayesplot, ggridges, stringr, ggrepel, coda,
     bookdown,

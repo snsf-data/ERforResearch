@@ -7,8 +7,6 @@
 #'
 #' This function plot the results form the JAGS-ER
 #' @param er_results the resulting object from the `get_er_from_jags()` function
-#' @param rankability Do we want the rankability written in the plot title
-#' (default = TRUE)
 #' @param how_many_fundable number of proposals that can be funded?
 #' (default = NULL) If Null, the graph will be black and white only
 #' @param title beginning of the plot title (default = " ")
@@ -59,7 +57,7 @@
 #' plotting_er_results(ER_results, title = "Panel 1", how_many_fundable = 5)
 #' }
 #' @export
-plotting_er_results <- function(er_results, rankability = TRUE,
+plotting_er_results <- function(er_results,
                                 id_application = "id_application",
                                 how_many_fundable = NULL,
                                 title = "",
@@ -173,14 +171,10 @@ plotting_er_results <- function(er_results, rankability = TRUE,
                          labels = unique(er_results$rankings$rank),
                          guide = guide_axis(check.overlap = TRUE))
   }
-  if (rankability) {
-    finish_plot <- middle_plot +
-      ggtitle(paste0(title, ", rankability: ",
-                     round(er_results$rankability, 2)))
-  } else {
-    finish_plot <- middle_plot +
-      ggtitle(title)
-  }
+
+  finish_plot <- middle_plot +
+    ggtitle(title)
+
 
   finish_plot +
     theme(panel.grid.major.x = element_blank(),
@@ -213,6 +207,8 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 #' (default = rank_theta")
 #' @param theta_name the name of the application identifier. (default =
 #' "application_intercept")
+#' @param voter_name the name of the voter intercept in the JAGS model (default
+#' = voter_intercept).
 #' @param tau_name name of tau in the JAGS model, being the precision of the
 #' random effects, in the jags model. (default = sd_application)
 #' @param tau_voter_name name of the standard error of the voter effect.
@@ -240,8 +236,10 @@ plotting_er_results <- function(er_results, rankability = TRUE,
 #' @import rjags
 #' @import dplyr
 #' @importFrom utils head
+#'
 #' @return the result is a plot of the rankogram (or cumulative ranking
 #' probabilities)
+#'
 #' @export
 plot_rankogram <- function(data, id_application, id_voter,
                            grade_variable = "num_grade",
@@ -251,6 +249,7 @@ plot_rankogram <- function(data, id_application, id_voter,
                            id_section = NULL,
                            rank_theta_name = "rank_theta",
                            theta_name = "application_intercept",
+                           voter_name = "voter_intercept",
                            tau_name = "tau_application",
                            tau_voter_name = "tau_voter",
                            tau_section_name = NULL,
@@ -287,11 +286,11 @@ plot_rankogram <- function(data, id_application, id_voter,
                                      n_adapt = n_adapt, n_burnin = n_burnin,
                                      id_section = id_section,
                                      theta_name = theta_name,
+                                     voter_name = voter_name,
                                      tau_name = tau_name,
                                      tau_voter_name = tau_voter_name,
                                      tau_section_name = tau_section_name,
                                      sigma_name = sigma_name,
-                                     other_variables = NULL,
                                      rank_theta_name = rank_theta_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
@@ -299,9 +298,10 @@ plot_rankogram <- function(data, id_application, id_voter,
                                        heterogeneous_residuals,
                                      inits_type = inits_type,
                                      initial_values = initial_values,
-                                     seed = seed, quiet = quiet)
+                                     seed = seed, quiet = quiet,
+                                     compute_ess = FALSE) # no need)
   } else {
-    if (length(mcmc_samples) != 6) {
+    if (length(mcmc_samples) != 8) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }
@@ -480,10 +480,28 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 #' @param proposal Word written infront of number (default = "Proposal")
 #' @param use_outer_inner should the inner or outer CRI be used for funding
 #' decisions (default = "inner")
+#'
 #' @return the result is a plot of the expected rank together with their
 #' credible intervals
+#'
 #' @import bayesplot
-#' @export
+#'
+#'@export
+#'
+#'@examples
+#' data_panel1 <- get_mock_data() %>%
+#'      filter(panel == "p1")
+#' \dontrun{
+#' mcmc_samples <- get_mcmc_samples(data = data_panel1,
+#'                                  id_application = "application",
+#'                                  id_voter = "voter",
+#'                                  grade_variable = "num_grade")
+#' plot_er_distributions(mcmc_samples_object,
+#'                       n_proposals = data_panel1 %>%
+#'                            summarise(n = n_distinct(application)) %>%
+#'                            pull(),
+#'                       number_fundable = 5)
+#'                       }
 plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                   name_er_or_theta = "rank_theta",
                                   er = TRUE, title = NULL,
