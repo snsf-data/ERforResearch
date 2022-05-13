@@ -1,5 +1,25 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# ERforResearch 3.1.1.9000
+
+- added an option in the ER plotting function to allow for not having the PM, and skipping it in the plot
+
+
+# ERforResearch 3.1.1
+
+- added an option in the ER plotting function to allow for not having the PM, and skipping it in the plot
+- documentation updates
+
+
+# ERforResearch 3.1.0
+
+- documentation updates
+- added parameter `rhat_threshold` in `get_mcmc_samples()` to allow the user to change the threshold used to decide whether the chains converged.
+- added option `maximal_testing` in mcmc function
+- add a default continuous model with a nine point scale
+- added na.rm = TRUE whenever max(rhat) calculated
+
+
 # ERforResearch 3.0.0.9000
 
 * nothing to add

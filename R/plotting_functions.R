@@ -20,6 +20,8 @@
 #' should be added next to the ER points (default = FALSE).
 #' @param easy_numbering should the ER results just be numbered?
 #' (default = TRUE)
+#' @param no_pm_available has the posterior mean not been computed? (default =
+#' FALSE, e.g. it has been computed and is in the object)
 #' @param pt_size size of points (default = 1)
 #' @param line_size size of the lines (default = 0.5)
 #' @param grep_size the size of the labels on the points (default = .25).
@@ -65,6 +67,7 @@ plotting_er_results <- function(er_results,
                                 draw_funding_line = TRUE,
                                 result_show = TRUE,
                                 easy_numbering = TRUE,
+                                no_pm_available = FALSE,
                                 colors = NULL,
                                 pt_size = 1, line_size = .5,
                                 alpha_line = 1, alpha_pt = 1,
@@ -103,16 +106,27 @@ plotting_er_results <- function(er_results,
       arrange(.data$er) %>%
       mutate(numbering = 1:n())
 
+  if (!no_pm_available){
+    dat_for_plot <- dat_for_plot %>%
+      gather("rank", "rank_pm", "er",
+             key = "which_rank", value = "rank") %>%
+      mutate(which_rank = case_when(.data$which_rank == "rank" ~ "Fixed",
+                                    .data$which_rank == "rank_pm" ~
+                                      "Posterior Mean",
+                                    .data$which_rank == "er" ~ "ER"),
+             which_rank = factor(.data$which_rank,
+                                 levels = c("Fixed",
+                                            "Posterior Mean", "ER")))
+  } else {
+    dat_for_plot <- dat_for_plot %>%
+      gather("rank", "er",
+             key = "which_rank", value = "rank")  %>%
+      mutate(which_rank = case_when(.data$which_rank == "rank" ~ "Fixed",
+                                    .data$which_rank == "er" ~ "ER"),
+             which_rank = factor(.data$which_rank,
+                                 levels = c("Fixed", "ER")))
+  }
   dat_for_plot <- dat_for_plot %>%
-    gather("rank", "rank_pm", "er",
-           key = "which_rank", value = "rank") %>%
-    mutate(which_rank = case_when(.data$which_rank == "rank" ~ "Fixed",
-                                  .data$which_rank == "rank_pm" ~
-                                    "Posterior Mean",
-                                  .data$which_rank == "er" ~ "ER"),
-           which_rank = factor(.data$which_rank,
-                               levels = c("Fixed",
-                                          "Posterior Mean", "ER"))) %>%
     rename(application_number = eval(id_application))
 
   start_plot <- dat_for_plot %>%
@@ -376,7 +390,9 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' Voter behavior distributions
 #'
 #' This function plots the distibutions of the average voter behavior
-#' (the $mu_j$'s in the model).
+#' (the $mu_j$'s in the model). Make sure that when using the get_mcmc_samples()
+#' function, the parameter for the average voter behavior (default nu) is
+#' sampled from the JAGS model.
 #'
 #' @param get_mcmc_samples_result the mcmc samples
 #' @param n_voters number of voters in the panel / call

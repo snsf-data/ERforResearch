@@ -13,6 +13,7 @@ plotting_er_results(
   draw_funding_line = TRUE,
   result_show = TRUE,
   easy_numbering = TRUE,
+  no_pm_available = FALSE,
   colors = NULL,
   pt_size = 1,
   line_size = 0.5,
@@ -56,6 +57,9 @@ should be added next to the ER points (default = FALSE).}
 
 \item{easy_numbering}{should the ER results just be numbered?
 (default = TRUE)}
+
+\item{no_pm_available}{has the posterior mean not been computed? (default =
+FALSE, e.g. it has been computed and is in the object)}
 
 \item{colors}{a color pallette that can be changes.}
 

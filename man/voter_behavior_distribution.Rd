@@ -40,5 +40,7 @@ voter behaviors.
 }
 \description{
 This function plots the distibutions of the average voter behavior
-(the $mu_j$'s in the model).
+(the $mu_j$'s in the model). Make sure that when using the get_mcmc_samples()
+function, the parameter for the average voter behavior (default nu) is
+sampled from the JAGS model.
 }

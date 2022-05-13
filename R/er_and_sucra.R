@@ -64,6 +64,11 @@
 #' if quiet = TRUE, this warning is not shown.
 #' @param compute_ess Should the effective sample size and the mcmc errors be
 #' calculated? (default = FALSE).
+#' @param maximal_testing should the rhat of all parameters be computed (TRUE),
+#' or just the essential ones (FALSE)? (default = FALSE)
+#' @param rhat_threshold the threshold for rhat to decide whether or not the
+#' chains converged. Gelman suggested 1.1, but the smaller the better
+#' (default = 1.01).
 #'
 #' @import rjags
 #' @import dplyr
@@ -129,7 +134,9 @@ get_er_from_jags <-  function(data, id_application,
                               names_variables_to_sample = NULL,
                               seed = 1991,
                               quiet = FALSE,
-                              compute_ess = FALSE) {
+                              compute_ess = FALSE,
+                              maximal_testing = FALSE,
+                              rhat_threshold = 1.01) {
 
   # Tests:
   ## 1) If no mcmc samples are provided, name of the voter variables is needed:
@@ -200,7 +207,9 @@ get_er_from_jags <-  function(data, id_application,
                                      names_variables_to_sample =
                                        names_variables_to_sample,
                                      seed = seed, quiet = quiet,
-                                     compute_ess = compute_ess)
+                                     compute_ess = compute_ess,
+                                     maximal_testing = maximal_testing,
+                                     rhat_threshold = rhat_threshold)
   } else {
     if (length(mcmc_samples) != 8) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",

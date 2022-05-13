@@ -34,7 +34,8 @@ get_mcmc_samples(
   names_variables_to_sample = NULL,
   initial_values = NULL,
   compute_ess = FALSE,
-  maximal_testing = FALSE
+  maximal_testing = FALSE,
+  rhat_threshold = 1.01
 )
 }
 \arguments{
@@ -122,15 +123,19 @@ calculated? (default = FALSE)}
 
 \item{maximal_testing}{should the rhat of all parameters be computed (TRUE),
 or just the essential ones (FALSE)? (default = FALSE)}
+
+\item{rhat_threshold}{the threshold for rhat to decide whether or not the
+chains converged. Gelman suggested 1.1, but the smaller the better
+(default = 1.01).}
 }
 \value{
 The function returns a list with: a matrix with the samples for all
  parameters defined in the model, and more information on the number of
  chains, and the length of the adaptation, iteration and burnin phase, and
  an indicator on whether or not the chains converged (according to Rhat being
- smaller than 1.01.). Note that n_iter, burnin, adapt are the number per
- chain. Then, optionally the effective sample size (ess) for the relevant
- parameters is calculated as well as the MCMC error
+ smaller than `rhat_threshold`). Note that n_iter, burnin, adapt are the
+ number per chain. Then, optionally the effective sample size (ess) for the
+ relevant parameters is calculated as well as the MCMC error
  (= sd(parameter)/sqrt(ess)) and added to the list.
 }
 \description{
@@ -140,11 +145,11 @@ diagnostics at the same time. Find more in Details.
 \details{
 Note that a convergence test is applied in this function: If with
 the specified length of adaptation and burnin phase together with the number
-of specified iterations not all Rhat values are below 1.01, the latter Ns
-(n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5, 10, 5x10,
-10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are below 1.01
-or the number of iteration would exceed max_iter. If the Rhat values are
-still not all small enough a warning message is printed.
+of specified iterations not all Rhat values are below `rhat_threshold`, the
+latter Ns (n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5,
+10, 5x10, 10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are
+below `rhat_threshold`or the number of iteration would exceed max_iter. If
+the Rhat values are still not all small enough a warning message is printed.
 }
 \examples{
 data_panel1 <- get_mock_data() \%>\%

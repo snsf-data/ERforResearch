@@ -34,7 +34,9 @@ get_er_from_jags(
   names_variables_to_sample = NULL,
   seed = 1991,
   quiet = FALSE,
-  compute_ess = FALSE
+  compute_ess = FALSE,
+  maximal_testing = FALSE,
+  rhat_threshold = 1.01
 )
 }
 \arguments{
@@ -122,6 +124,13 @@ if quiet = TRUE, this warning is not shown.}
 
 \item{compute_ess}{Should the effective sample size and the mcmc errors be
 calculated? (default = FALSE).}
+
+\item{maximal_testing}{should the rhat of all parameters be computed (TRUE),
+or just the essential ones (FALSE)? (default = FALSE)}
+
+\item{rhat_threshold}{the threshold for rhat to decide whether or not the
+chains converged. Gelman suggested 1.1, but the smaller the better
+(default = 1.01).}
 }
 \value{
 the result is a list with the

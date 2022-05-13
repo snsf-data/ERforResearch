@@ -529,6 +529,9 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' calculated? (default = FALSE)
 #' @param maximal_testing should the rhat of all parameters be computed (TRUE),
 #' or just the essential ones (FALSE)? (default = FALSE)
+#' @param rhat_threshold the threshold for rhat to decide whether or not the
+#' chains converged. Gelman suggested 1.1, but the smaller the better
+#' (default = 1.01).
 #' @import rjags
 #' @import coda
 #' @import dplyr
@@ -538,18 +541,18 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #'  parameters defined in the model, and more information on the number of
 #'  chains, and the length of the adaptation, iteration and burnin phase, and
 #'  an indicator on whether or not the chains converged (according to Rhat being
-#'  smaller than 1.01.). Note that n_iter, burnin, adapt are the number per
-#'  chain. Then, optionally the effective sample size (ess) for the relevant
-#'  parameters is calculated as well as the MCMC error
+#'  smaller than `rhat_threshold`). Note that n_iter, burnin, adapt are the
+#'  number per chain. Then, optionally the effective sample size (ess) for the
+#'  relevant parameters is calculated as well as the MCMC error
 #'  (= sd(parameter)/sqrt(ess)) and added to the list.
 #'
 #' @details Note that a convergence test is applied in this function: If with
 #' the specified length of adaptation and burnin phase together with the number
-#' of specified iterations not all Rhat values are below 1.01, the latter Ns
-#' (n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5, 10, 5x10,
-#' 10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are below 1.01
-#' or the number of iteration would exceed max_iter. If the Rhat values are
-#' still not all small enough a warning message is printed.
+#' of specified iterations not all Rhat values are below `rhat_threshold`, the
+#' latter Ns (n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5,
+#' 10, 5x10, 10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are
+#' below `rhat_threshold`or the number of iteration would exceed max_iter. If
+#' the Rhat values are still not all small enough a warning message is printed.
 #' @export
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
@@ -584,7 +587,8 @@ get_mcmc_samples <- function(data, id_application, id_voter,
                              # (specify the names in the argument below)
                              names_variables_to_sample = NULL,
                              initial_values = NULL,
-                             compute_ess = FALSE, maximal_testing = FALSE) {
+                             compute_ess = FALSE, maximal_testing = FALSE,
+                             rhat_threshold = 1.01) {
 
   ## Tests:
   #########
@@ -626,7 +630,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   # chains
   if (inits_type == "overdispersed" & is.null(initial_values) & n_chains != 4) {
     stop(paste0("The default overdispersed initial values can only be provided",
-                " with two chains at the moment. Please provide your own ",
+                " with four chains at the moment. Please provide your own ",
                 "initial values using parameter initial_values."))
   }
   ## 6) If initial values are provided, make sure they are provided for all
@@ -840,7 +844,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   samps1 <- coda.samples(mod1, variable.names = variables,
                          n.iter = n_iter, quiet = TRUE)
 
-  # Get the Rhat values and see if max is lower than 1.01:
+  # Get the Rhat values and see if max is lower than rhat_threshold:
   # do not perform multivariate computation since this sometimes leads to
   # error messages and we do not need that result
   # use the whole series, not only the second half (autoburnin = FALSE)
@@ -849,7 +853,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
 
   update <- multiplier <- 1
   multiplicative <- c(sapply(1:7, function(i) c(i - 1, i -1)))
-  while (max(rhat, na.rm = TRUE) > 1.01 & # update <= 5 &
+  while (max(rhat, na.rm = TRUE) > rhat_threshold & # update <= 5 &
          (n_iter * (5 * 2^((1 + update)%%2) *
                     10 ^ multiplicative[update]) <= max_iter)) {
     multiplier <- 5 * 2^((1 + update)%%2) * 10 ^ multiplicative[update]
@@ -872,7 +876,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
                            n.iter = n_iter*multiplier, quiet = TRUE)
 
     # Get the Rhat values and check again (for the next loop) if max is lower
-    # than 1.01:
+    # than rhat_threshold:
     rhat <- gelman.diag(samps1, autoburnin = FALSE,
                         multivariate = FALSE)$psrf[ ,1]
     update <- update + 1
@@ -882,7 +886,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
     mcmc_samples <- mcmc(samps1)
   } else mcmc_samples <- mcmc(do.call(rbind, samps1))
 
-  if (max(rhat, na.rm = TRUE) > 1.01) {
+  if (max(rhat, na.rm = TRUE) > rhat_threshold) {
     print(paste0(
       "Caution: Even after increasing the adaption phase to ",
       n_adapt * multiplier, " iterations, the burnin phase to ",
@@ -890,8 +894,8 @@ get_mcmc_samples <- function(data, id_application, id_voter,
       " and the number of iterations to ",
       n_iter * multiplier, " the max of the Rhat values is ",
       round(max(rhat, na.rm = TRUE), 2),
-      " e.g. > 1.01. The problematic parameter(s) is (are): ",
-      paste0(names(rhat[which(rhat > 1.01)]), collapse = ", "), "."))
+      " e.g. > ", rhat_threshold, ". The problematic parameter(s) is (are): ",
+      paste0(names(rhat[which(rhat > rhat_threshold)]), collapse = ", "), "."))
   }
 
   if (compute_ess) {
@@ -914,8 +918,11 @@ get_mcmc_samples <- function(data, id_application, id_voter,
               n_adapt = n_adapt * ifelse(update > 1, multiplier, 1),
               n_burnin = n_burnin * ifelse(update > 1, multiplier, 1),
               n_iter = n_iter * ifelse(update > 1, multiplier, 1),
-              conv_status = ifelse(max(rhat, na.rm = TRUE) > 1.01, "Problem max rhat > 1.01",
-                                   "Converged"),
+              conv_status =
+                ifelse(max(rhat, na.rm = TRUE) > rhat_threshold,
+                       paste0("Problem max rhat > ", rhat_threshold),
+                       paste0("Converged (with threshold set to ",
+                              rhat_threshold, ")")),
               ess = ess,
               mcmc_error = mcmc_error))
 }
