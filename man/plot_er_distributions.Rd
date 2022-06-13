@@ -22,7 +22,10 @@ plot_er_distributions(
   alpha_inner = 0.5,
   alpha_outer = 1,
   proposal = "Proposal ",
-  use_outer_inner = "inner"
+  use_outer_inner = "inner",
+  change_random_selection_to = NULL,
+  change_rejected_to = NULL,
+  change_accepted_to = NULL
 )
 }
 \arguments{
@@ -70,6 +73,15 @@ the `get_mcmc_samples()` function (default = NULL, they are simply numerated).}
 
 \item{use_outer_inner}{should the inner or outer CRI be used for funding
 decisions (default = "inner")}
+
+\item{change_random_selection_to}{Should the "random selection" group be
+called something else; f.ex "tie group" (default = NULL)}
+
+\item{change_rejected_to}{Should the "rejected" group be called something
+else (default = NULL)}
+
+\item{change_accepted_to}{Should the "accepted" group be called something
+else (default = NULL)}
 }
 \value{
 the result is a plot of the expected rank together with their
@@ -87,7 +99,7 @@ mcmc_samples <- get_mcmc_samples(data = data_panel1,
                                  id_application = "application",
                                  id_voter = "voter",
                                  grade_variable = "num_grade")
-plot_er_distributions(mcmc_samples_object,
+plot_er_distributions(mcmc_samples,
                       n_proposals = data_panel1 \%>\%
                            summarise(n = n_distinct(application)) \%>\%
                            pull(),

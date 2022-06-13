@@ -496,6 +496,12 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 #' @param proposal Word written infront of number (default = "Proposal")
 #' @param use_outer_inner should the inner or outer CRI be used for funding
 #' decisions (default = "inner")
+#' @param change_random_selection_to Should the "random selection" group be
+#' called something else; f.ex "tie group" (default = NULL)
+#' @param change_rejected_to Should the "rejected" group be called something
+#' else (default = NULL)
+#' @param change_accepted_to Should the "accepted" group be called something
+#' else (default = NULL)
 #'
 #' @return the result is a plot of the expected rank together with their
 #' credible intervals
@@ -512,7 +518,7 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 #'                                  id_application = "application",
 #'                                  id_voter = "voter",
 #'                                  grade_variable = "num_grade")
-#' plot_er_distributions(mcmc_samples_object,
+#' plot_er_distributions(mcmc_samples,
 #'                       n_proposals = data_panel1 %>%
 #'                            summarise(n = n_distinct(application)) %>%
 #'                            pull(),
@@ -528,7 +534,10 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                   size_inner = 2, alpha_inner = .5,
                                   alpha_outer = 1,
                                   proposal = "Proposal ",
-                                  use_outer_inner = "inner"){
+                                  use_outer_inner = "inner",
+                                  change_random_selection_to = NULL,
+                                  change_rejected_to = NULL,
+                                  change_accepted_to = NULL){
 
 
   er_colnames <- paste0(name_er_or_theta, "[", seq_len(n_proposals), "]")
@@ -557,30 +566,50 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
   }
 
   if (!is.null(number_fundable)) {
-    # If we draw a funding line
+    # If we draw a funding line, the provisional funding line is equal to the
+    # ER of the last fundable proposal
     funding_line_at <- mcmc_intervals_data_mat %>%
       arrange(.data$m) %>%
       slice(number_fundable) %>%
       dplyr::pull(.data$m)
+
+    # The names of the different recommendation groups; by default accepted,
+    # rejected, and random selection groups.
+    group_names <- c(accepted = ifelse(is.null(change_accepted_to), "accepted",
+                                       change_accepted_to),
+                     rejected = ifelse(is.null(change_rejected_to), "rejected",
+                                       change_rejected_to),
+                     "random selection" =
+                       ifelse(is.null(change_random_selection_to),
+                              "random selection", change_random_selection_to))
+    # Distribute into the different recommendation groups, depending on whether
+    # the decision should be taken based on the inner or on the outer CrI.
     if (use_outer_inner == "inner") {
-    mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
-      mutate(rs = ifelse((.data$l <= funding_line_at) &
-                           (.data$h >= funding_line_at), "random selection",
-                         ifelse((.data$l < funding_line_at) &
-                                  (.data$h < funding_line_at),
-                                "accepted", "rejected")),
-             rs = factor(.data$rs, c("accepted", "rejected",
-                                     "random selection")))
+      mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
+        mutate(rs = ifelse(((.data$l <= funding_line_at) &
+                             (.data$h >= funding_line_at)) |
+                             .data$m == funding_line_at,
+                           # To ensure the special case where the ER of the last
+                           # fundable is not in the CrI of the last fundable,
+                           # because of the ER being the mean and the CrI
+                           # quantiles.
+                           group_names["random selection"],
+                           ifelse((.data$l < funding_line_at) &
+                                    (.data$h < funding_line_at),
+                                  group_names["accepted"], group_names["rejected"])),
+               rs = factor(.data$rs, group_names))
     }
+
     if (use_outer_inner == "outer") {
       mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
         mutate(rs = ifelse((.data$ll <= funding_line_at) &
-                             (.data$hh >= funding_line_at), "random selection",
+                             (.data$hh >= funding_line_at),
+                           group_names["random selection"],
                            ifelse((.data$ll < funding_line_at) &
                                     (.data$hh < funding_line_at),
-                                  "accepted", "rejected")),
-               rs = factor(.data$rs, c("accepted", "rejected",
-                                       "random selection")))
+                                  group_names["accepted"],
+                                  group_names["rejected"])),
+               rs = factor(.data$rs, group_names))
     }
 
 
@@ -592,21 +621,29 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
       mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
         mutate(rs = ifelse((.data$l <= funding_line_at) &
                              (.data$h >= funding_line_at),
-                           "random selection",
+                           group_names["random selection"],
                            ifelse((.data$l < funding_line_at) &
                                     (.data$h < funding_line_at),
-                                  "rejected", "accepted")),
-               rs = factor(.data$rs, c("accepted", "rejected",
-                                       "random selection")))
+                                  group_names["rejected"],
+                                  group_names["accepted"])),
+               rs = factor(.data$rs, group_names))
     }
 
+    # If all proposals in the random selection group can be founded, e.g. the
+    # ones not in the rejected group, then, the ones in the random selection
+    # group will be transfered to the accepted group.
     if (mcmc_intervals_data_mat %>%
-        filter(.data$rs != "rejected") %>%
+        filter(.data$rs != group_names["rejected"]) %>%
         nrow() == number_fundable) {
+      # to recode the factor, we will use a named vector:
+      t <- c(group_names["accepted"])
+      names(t) <- group_names["random selection"]
+
       mcmc_intervals_data_mat <- mcmc_intervals_data_mat %>%
-        mutate(rs = recode_factor(.data$rs, "random selection" = "accepted"))
+        mutate(rs = recode_factor(.data$rs, !!!t))
     }
   }
+
 
   plot <- mcmc_intervals_data_mat %>%
     mutate(parameter = factor(.data$parameter, levels = order)) %>%
