@@ -5,7 +5,7 @@
 
 This package implements the functionality to use the expected ranks (ER)
 in the context of research evaluation as presented in [this recent
-preprint](...). For a demonstration of the major functions check out the
+paper](https://www.tandfonline.com/doi/full/10.1080/2330443X.2022.2086190). For a demonstration of the major functions check out the
 vignette (Demo ERforResearch).
 
 ## Installation
