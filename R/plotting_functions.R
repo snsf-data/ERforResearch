@@ -530,7 +530,7 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                                   names_proposals = NULL, inner_credible = .5,
                                   outer_credible = .9, ylab = "Expected Ranks",
                                   number_fundable = NULL, outer_show = TRUE,
-                                  size_pt = 1.5, size_outer = .5,
+                                  size_pt = 1.75, size_outer = .5,
                                   size_inner = 2, alpha_inner = .5,
                                   alpha_outer = 1,
                                   proposal = "Proposal ",
@@ -673,10 +673,11 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
                        x = .data$parameter, xend = .data$parameter,
                        color = .data$rs),
                    size = size_inner, alpha = alpha_inner) +
-      geom_point(aes(y = .data$m, x = .data$parameter),
-                 size = size_pt, color = "darkblue") +
+      geom_point(aes(y = .data$m, x = .data$parameter, fill = .data$rs),
+                 size = size_pt, pch = 21, color = "darkblue") +
       scale_color_manual(values = c("#E69F00", "#56B4E9",
-                                    "#7f36c4")) + #, "#009E73")) +
+                                    "#7f36c4")) +
+      scale_fill_manual(values = c("#E69F00", "#56B4E9", "#7f36c4")) +
       labs(y = ylab, title = title) +
       theme_minimal() +
       theme(panel.grid.major.y = element_blank(),
@@ -691,8 +692,8 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
       geom_segment(aes(y = .data$l, yend = .data$h,
                        x = .data$parameter, xend = .data$parameter),
                    size = size_inner, alpha = alpha_inner, color = "darkblue") +
-      geom_point(aes(y = .data$m, x = .data$parameter),
-                 size = size_pt, color = "darkblue") +
+      geom_point(aes(y = .data$m, x = .data$parameter, fill = .data$rs),
+                 size = size_pt, pch = 21, color = "darkblue") +
       labs(y = ylab, title = title) +
       theme_minimal() +
       theme(panel.grid.major.y = element_blank(),
