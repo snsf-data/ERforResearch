@@ -15,7 +15,7 @@ Imports: bayesplot, ggridges, stringr, ggrepel, coda,
 Depends: rjags, dplyr, tidyr, ggplot2
 VignetteBuilder: knitr
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Suggests:
     testthat (>= 3.0.0),
     devtools,

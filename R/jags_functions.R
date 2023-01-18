@@ -469,134 +469,181 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 }
 
 
-#' Mcmc samples
+#' MCMC samples
 #'
-#' Helper function to get the mcmc samples. The function tests convergence
-#' diagnostics at the same time. Find more in Details.
+#' Helper function to get the mcmc samples. It is essentially a function wrapped
+#' around the function `runjags::run.jags()`. The function also tests
+#' convergence of the chains and extends them until convergence is achieved.
+#' Find more in Details.
 #'
-#' @param data long data frame with all information as in the jags model
-#' defined below.
-#' @param id_application the name of the application variable in the data
-#' @param id_voter the name of the voter variable in the data (default = NULL)
-#' @param grade_variable the name of the outcome variable
-#' @param path_to_jags_model the path to the jags txt file, if null, the
-#' default model is used. (default = NULL)
-#' @param n_iter how many iterations used in the JAGS sampler?
-#'  (default = 5000)
-#' @param n_chains number of chains for the JAGS sampler. The default number of
-#' chains is set to four. This creates optimal conditions and should not be
-#' changed.
-#' @param n_adapt number of iterations discarded for the adaptation phase.
-#'  (default = 1000)
-#' @param n_burnin number of burnin iterations discarded. (default = 1000)
-#' @param max_iter maximum number of iteration (default = 1 million)
-#' @param id_section name of the section
-#' @param theta_name the name of the application identifier in the JAGS model.
-#' (default = application_intercept")
-#' @param tau_name name of the tau in the jags model, being the standard error
-#' of the application effects (default = tau_application).
-#' @param tau_voter_name name of the standard error of the voter effect
-#' (default = tau_voter).
-#' @param rank_theta_name the name of the rank of theta in the JAGS model
-#' (default = rank_theta)
-#' @param voter_name the name of the voter intercept in the JAGS model (default
-#' = voter_intercept).
-#' @param tau_section_name name of the standard error of the section effect, if
-#' needed (default = tau_section).
-#' @param sigma_name name of the standard deviation of the full model.
-#' (default = sigma)
+#' @param data long data frame with all needed variables as specified in the
+#' JAGS model defined in the text file with path given in `path_to_jags_model`.
+#' @param path_to_jags_model the path to text file including the JAGS model
+#' definition. By default `= NULL`, and the function will use a default model as
+#' implemented in the package; in `get_default_jags_model()`.
+#' @param n_iter how many iterations should be used in the JAGS sampler? This is
+#' the same as `sample` in the `runjags::run.jags()` function. It is set to
+#' `10000` by default.
+#' @param n_chains the number of chains for the JAGS sampler. The default number
+#' of chains is set to four. This creates optimal conditions and should not be
+#' changed. The same parameter in `runjags::run.jags()` is called `n.chains`.
+#' @param n_adapt the number of adaptive iterations discarded for the adaptation
+#' phase. By default it is set to `1000`. The same parameter in
+#' `runjags::run.jags()` is called `adapt`.
+#' @param n_burnin the number of burnin iterations which will not be included in
+#' the adaptation phase. By default it is set to `4000` and the same parameter
+#' in `runjags::run.jags()` is called `burnin`.
+#' @param max_iter the maximum number of iteration. The JAGS sample will be
+#' extended until convergence of the chains. To ensure that the sampler does not
+#' run and extend forever a maximum number of iterations per chain can be
+#' defined. Once this number of iterations is achieved, the sampler will not be
+#' further extended. By default, the function allows up to `1000000` iterations
+#' before stopping.
+#' @param id_proposal the name of the variable in `data` that indicates the ID
+#' of the evaluated proposal.
+#' @param id_assessor the name of the variable in `data` that indicates the ID
+#' of the assessor. The default `= NULL`, for the case where each assessor only
+#' evaluates/grades one proposal.
+#' @param id_panel the name of the variable in `data` that indicates the ID
+#' of the panel. The default `= NULL`, for the case where all proposals were
+#' evaluated in the same panel, or were each panel creates its own ranking.
+#' In the other scenario, a ranking would be established combining or merging
+#' all panels.
+#' @param grade_variable the name of the variable in `data` with the outcome
+#' variable, \textit{i.e.} the grade or score.
+#' @param theta_name the name of the proposal intercept in the JAGS model.
+#' The default that also goes with the default JAGS model build in the package
+#' is `proposal_intercept`.
+#' @param tau_name_proposal_proposal the name of tau in the JAGS model, being the
+#' standard error of the proposal effects. The default that also goes with the
+#' default JAGS model build in the package is `tau_proposal`.
+#' @param tau_name_assessor name of the standard error of the assessor effect in
+#' the JAGS model.  The default that also goes with the default JAGS model build
+#' in the package is `tau_assessor`.
+#' @param rank_theta_name the name of the rank of theta in the JAGS model. The
+#' default that also goes with the default JAGS model build in the package is
+#' `rank_theta`.
+#' @param assessor_name the name of the assessor intercept in the JAGS model.
+#' The default that also goes with the default JAGS model build in the package
+#' is `assessor_intercept`.
+#' @param tau_panel_name the name of the standard error of the panel effect, if
+#' needed. The default that also goes with the default JAGS model build in the
+#' package is `tau_panel`. This is only needed if a ranking has to be
+#' established combining or merging all panels, and therefore only important if
+#' `id_panel` is not `NULL`.
+#' @param sigma_name name of the standard deviation of the full model. The
+#' default that also goes with the default JAGS model build in the package is
+#' `sigma`.
 #' @param ordinal_scale dummy variable informing us on whether or not the
-#' outcome is on an ordinal scale (default = FALSE)
+#' outcome is on an ordinal scale. By default, we assume a numeric scale and
+#' this parameter is set to `FALSE`.
 #' @param point_scale integer informing us on the number of points of the
-#' ordinal scale; not needed for continuous scale (default = NULL)
+#' ordinal scale; not needed for continuous scale. By default, we assume a
+#' numeric scale and do not need this information and the  parameter is set to
+#' `NULL`.
 #' @param heterogeneous_residuals dummy variable informing us on whether or not
-#' the residuals should be heterogeneous (in this case you have to update the
-#' JAGS model too, default = FALSE)
-#' @param seed set a seed for the JAGS model (default = 1991)
+#' the residuals should be heterogeneous. By default the residuals are assumed
+#' homogeneous and this parameter is set to `FALSE`.
+#' @param seed the seed for the JAGS model (default = `1991`). This seed will
+#' generate the seeds for the JAGS samplers, which ensures reproducibility; see
+#' also Details.
 #' @param quiet if the default model is used this function generates a warning.
-#' if quiet = TRUE, this warning is not shown
-#' @param dont_bind if TRUE the different chains are not pooled, and the MCMC
-#' object is returned as it is (default = FALSE).
-#' @param inits_type type of the initial values, default is "random", but if two
-#' chains are used, the initial values can also be  "overdispersed"
-#' @param variables_to_sample should the default variables be samples, or will
-#' they be "specified" (in names_variables_to_sample), default is "default".
-#' @param names_variables_to_sample if variables to sample are specified, write
-#' their names here, as a character-vector, default is NULL.
+#' if `quiet = TRUE`, the warning is not shown.
+#' @param dont_bind setting this parameter to `TRUE` will pool all the chains
+#' together before returning the MCMC. By default it is however set to `FALSE`.
+#' @param inits_type the type of the initial values. By default the initial
+#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' Alternatively, if four chains are used, the initial values can also be
+#' `"overdispersed"`.
+#' @param names_variables_to_sample the variables to sample can be specified,
+#' writin their names here, as a character-vector. The default is `NULL` and
+#' the default variables are used.
 #' @param initial_values The list of initial values for the jags sampler can be
-#' provided directly
-#' @param compute_ess Should the effective sample size and the mcmc errors be
-#' calculated? (default = FALSE)
-#' @param maximal_testing should the rhat of all parameters be computed (TRUE),
-#' or just the essential ones (FALSE)? (default = FALSE)
+#' provided directly. Otherwise `get_inits_overdispersed_four_chains` for the
+#' overdispersed version is used, or they are randomly selected. Always using a
+#' seed to ensure computational reproducibility.
 #' @param rhat_threshold the threshold for rhat to decide whether or not the
-#' chains converged. Gelman suggested 1.1, but the smaller the better
-#' (default = 1.01).
-#' @import rjags
+#' chains converged. Gelman suggested 1.1, but the smaller the better. Hence
+#' this functions threshold is set to `1.01` by default.
+#' @param runjags_method the method with which to call JAGS (from
+#' `runjags::run.jags()` with the default being set to `parallel`).
+#'
+#' @import runjags
 #' @import coda
 #' @import dplyr
-#' @importFrom dplyr filter
 #' @importFrom stats rnorm runif
-#' @return The function returns a list with: a matrix with the samples for all
-#'  parameters defined in the model, and more information on the number of
-#'  chains, and the length of the adaptation, iteration and burnin phase, and
-#'  an indicator on whether or not the chains converged (according to Rhat being
-#'  smaller than `rhat_threshold`). Note that n_iter, burnin, adapt are the
-#'  number per chain. Then, optionally the effective sample size (ess) for the
-#'  relevant parameters is calculated as well as the MCMC error
-#'  (= sd(parameter)/sqrt(ess)) and added to the list.
 #'
-#' @details Note that a convergence test is applied in this function: If with
+#' @return The function returns a list with: the MCMC samples in `samples` for
+#' all parameters defined in the model, more information on the number of
+#' chains, and the length of the adaptation, iteration and burnin phase, and
+#' an indicator on whether or not the chains converged (according to all Rhats
+#' being smaller than `rhat_threshold`). Additionally a summary report matrix
+#' from `runjags::run.jags` is included (in `summary`) for each sampled
+#' parameter with, among others, the effective sample size, MCerror, and rhat
+#' values.
+#'
+#' @details
+#' A note on convergence:
+#'
+#'#' Note that a convergence test is applied in this function: If with
 #' the specified length of adaptation and burnin phase together with the number
 #' of specified iterations not all Rhat values are below `rhat_threshold`, the
 #' latter Ns (n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5,
 #' 10, 5x10, 10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are
 #' below `rhat_threshold`or the number of iteration would exceed max_iter. If
 #' the Rhat values are still not all small enough a warning message is printed.
+#'
+#' A note on reproducibility:
+#'
+#' To ensure reproducibility of the chains, all parameters need explicit
+#' starting values and each chain needs an explicitly selected random samplers
+#' (`.RNG.name`) and an explicitly selected seed (`.RNG.seed`). For four chains
+#' the samplers are chosen among `base::Wichmann-Hill`,
+#' `base::Marsaglia-Multicarry`, `base::Super-Duper`, `base::Mersenne-Twister`.
+#' For more, or less than four chains a sample (with or without replacement) of
+#' these samplers is selected.
+#'
 #' @export
 #' @examples
 #' data_panel1 <- get_mock_data() %>%
 #'      filter(panel == "p1")
 #' \dontrun{
 #' mcmc_samples <- get_mcmc_samples(data = data_panel1,
-#'                                  id_application = "application",
-#'                                  id_voter = "voter",
+#'                                  id_proposal = "application",
+#'                                  id_assessor = "voter",
 #'                                  grade_variable = "num_grade")
 #'                                  }
-get_mcmc_samples <- function(data, id_application, id_voter,
+get_mcmc_samples <- function(data, id_proposal, id_assessor,
                              grade_variable,
                              path_to_jags_model = NULL,
-                             n_chains = 4, n_iter = 5000,
-                             n_burnin = 1000, n_adapt = 1000,
-                             id_section = NULL, max_iter = 1000000,
-                             theta_name = "application_intercept",
-                             tau_name = "tau_application",
+                             n_chains = 4, n_iter = 10000,
+                             n_burnin = 4000, n_adapt = 1000,
+                             id_panel = NULL, max_iter = 1000000,
+                             theta_name = "proposal_intercept",
+                             tau_name_proposal = "tau_proposal",
                              sigma_name = "sigma",
-                             tau_voter_name = "tau_voter",
-                             tau_section_name = "tau_section",
+                             tau_name_assessor = "tau_assessor",
+                             tau_name_panel = "tau_panel",
                              rank_theta_name = "rank_theta",
-                             voter_name = "voter_intercept",
+                             assessor_name = "assessor_intercept",
                              ordinal_scale = FALSE,
                              point_scale = NULL,
                              heterogeneous_residuals = FALSE,
                              seed = 1991, quiet = FALSE,
                              dont_bind = FALSE,
                              inits_type = "random", # or "overdispersed"
-                             variables_to_sample = "default",
-                             # either "default" or "specified"
-                             # (specify the names in the argument below)
                              names_variables_to_sample = NULL,
                              initial_values = NULL,
-                             compute_ess = FALSE, maximal_testing = FALSE,
-                             rhat_threshold = 1.01) {
+                             rhat_threshold = 1.01,
+                             runjags_method = "parallel") {
 
   ## Tests:
   #########
   ## 1) are all the relevant variables in the data?
-  presence_of_variables <- !c(id_application, id_voter, grade_variable,
-                              id_section) %in% names(data)
+  presence_of_variables <- !c(id_proposal, id_assessor, grade_variable,
+                              id_panel) %in% names(data)
   if (any(presence_of_variables)) {
-    stop(paste0(c(id_application, id_voter, grade_variable, id_section)[
+    stop(paste0(c(id_proposal, id_assessor, grade_variable, id_panel)[
       which(presence_of_variables)], " needed but not present in dataset."))
   }
   ## 2) The grade variable has to be numeric.
@@ -613,7 +660,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
                                                      "ordinal", "continuous"),
                            residuals = ifelse(heterogeneous_residuals,
                                               "heterogeneous", "homogeneous"),
-                           subsections = !is.null(id_section))
+                           subsections = !is.null(id_panel))
     path_to_jags_model <- paste0(getwd(), "/", "default_jags_model.txt")
     if (!quiet)
       print("Default model is used (check get_default_jags_model function!).")
@@ -640,18 +687,6 @@ get_mcmc_samples <- function(data, id_application, id_voter,
     stop(paste0("You need to provide a list of ", n_chains, " initial values ",
                 "because your model is run over ", n_chains, " chains."))
   }
-  ## 7) variables_to_sample should be either "default" or "specified". If
-  # "specified", names_variables_to_sample has to be not null.
-  if (!variables_to_sample %in% c("default", "specified")) {
-    stop(paste0("The parameter variables_to_sample should be either 'default' ",
-                "or 'specified', and not ", variables_to_sample, "."))
-  } else {
-    if (variables_to_sample != "default" & is.null(names_variables_to_sample)) {
-      stop(paste0("You announced that the variables to sample would be ",
-                  "specified but forgot to specify them in ",
-                  "names_variables_to_sample."))
-    }
-  }
 
   ## Prepare data for jags:
   #########################
@@ -659,26 +694,26 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   # We need to add integer/count-like numeric ids for the application and the
   # voters in the data for the computation of the JAGS model:
   num_application <- data %>%
-    select(id_application) %>%
+    select(id_proposal) %>%
     distinct() %>%
     mutate(num_application = seq_len(n()))
   num_voter <- data %>%
-    select(id_voter) %>%
+    select(id_assessor) %>%
     distinct() %>%
     mutate(num_voter = seq_len(n()))
-  if (!is.null(id_section)) {
+  if (!is.null(id_panel)) {
     num_section <- data %>%
-      select(id_section) %>%
+      select(id_panel) %>%
       distinct() %>%
       mutate(num_section = seq_len(n()))
   }
   # Pasting everything together
   data <- data %>%
-    left_join(num_application, by = id_application) %>%
-    left_join(num_voter, by = id_voter)
-  if (!is.null(id_section)) {
+    left_join(num_application, by = id_proposal) %>%
+    left_join(num_voter, by = id_assessor)
+  if (!is.null(id_panel)) {
     data <- data %>%
-      left_join(num_section, by = id_section)
+      left_join(num_section, by = id_panel)
   }
 
   # Deleting potential NAs:
@@ -696,14 +731,14 @@ get_mcmc_samples <- function(data, id_application, id_voter,
       summarise(av = mean(get(grade_variable) - 1, na.rm = TRUE)) %>%
       dplyr::pull(.data$av) %>%
       mean()
-    } else {
-      num_outcome <- data %>% dplyr::pull(get(grade_variable))
-      overall_mean <- data %>%
-        group_by(num_application) %>%
-        summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
-        dplyr::pull(.data$av) %>%
-        mean()
-    }
+  } else {
+    num_outcome <- data %>% dplyr::pull(get(grade_variable))
+    overall_mean <- data %>%
+      group_by(num_application) %>%
+      summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
+      dplyr::pull(.data$av) %>%
+      mean()
+  }
 
   # The list with the data:
   data_for_jags <-
@@ -714,7 +749,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
          overall_mean = overall_mean,
          num_application = data$num_application,
          num_voter = data$num_voter)
-  if (!is.null(id_section)) { # if we have a section effect
+  if (!is.null(id_panel)) { # if we have a section effect
     data_for_jags <- c(data_for_jags,
                        list(n_section = length(unique(data$num_section)),
                             num_section = data$num_section))
@@ -730,27 +765,17 @@ get_mcmc_samples <- function(data, id_application, id_voter,
 
   # Sample certain _variables_ from the model, depending on whether or not they
   # are specified.
-  if (variables_to_sample == "default") {
-    if (maximal_testing) {
-      variables <- c(theta_name, tau_name, tau_voter_name, rank_theta_name,
-                     voter_name)
-      if (!heterogeneous_residuals){
-        variables <- c(variables, sigma_name)
-      }
-      if (!is.null(id_section)) {
-        variables <- c(variables, tau_section_name)
-      }
-      if (heterogeneous_residuals){
-        variables <- c(variables, "tau_omega", "alpha", "beta")
-      }
-    } else {
-      variables <- c(theta_name, tau_name, tau_voter_name, rank_theta_name)
-      if (!heterogeneous_residuals){
-        variables <- c(variables, sigma_name)
-      }
-      if (!is.null(id_section)) {
-        variables <- c(variables, tau_section_name)
-      }
+  if (is.null(names_variables_to_sample)) {
+    variables <- c(theta_name, tau_name_proposal, tau_name_assessor, rank_theta_name,
+                   assessor_name)
+    if (!heterogeneous_residuals){
+      variables <- c(variables, sigma_name)
+    }
+    if (!is.null(id_panel)) {
+      variables <- c(variables, tau_name_panel)
+    }
+    if (heterogeneous_residuals){
+      variables <- c(variables, "tau_omega", "alpha", "beta")
     }
   } else variables <- names_variables_to_sample
 
@@ -761,9 +786,9 @@ get_mcmc_samples <- function(data, id_application, id_voter,
   # To do so, we first generate a seed for each chain.
   set.seed(seed) # Inititalise seed (this is an argument in the function)
   seeds <- sample(seq_len(10^6), size = n_chains)
-                 # Initialise seeds for the RNG samplers
+  # Initialise seeds for the RNG samplers
   if (inits_type == "random") seed_for_inits <- sample(seq_len(10^6), 1)
-                 # Initialise seed for the initial values of the sampler
+  # Initialise seed for the initial values of the sampler
   samplers <- c("base::Wichmann-Hill", "base::Marsaglia-Multicarry",
                 "base::Super-Duper", "base::Mersenne-Twister")
   if (n_chains != 4) samplers <- rep(samplers,
@@ -775,17 +800,17 @@ get_mcmc_samples <- function(data, id_application, id_voter,
     inits <-
       lapply(seq_len(n_chains),
              function(x)
-               list(application_intercept =
+               list(proposal_intercept =
                       runif(data_for_jags$n_application, -2, 2),
-                    voter_intercept =
+                    assessor_intercept =
                       matrix(runif(data_for_jags$n_voter*
                                      data_for_jags$n_application, -2, 2),
                              ncol = data_for_jags$n_voter,
                              nrow = data_for_jags$n_application),
                     nu = runif(data_for_jags$n_voter, -2, 2),
                     sigma = runif(1, 10^(-6), 2),
-                    tau_application = runif(1, 10^(-6), 2),
-                    tau_voter = runif(1, 10^(-6), 2),
+                    tau_proposal = runif(1, 10^(-6), 2),
+                    tau_assessor = runif(1, 10^(-6), 2),
                     # need this part to get reproducible results
                     .RNG.name = samplers[x],
                     .RNG.seed = seeds[x]))
@@ -796,12 +821,12 @@ get_mcmc_samples <- function(data, id_application, id_voter,
       inits <- lapply(inits,
                       function(I) c(I,
                                     list(cc = seq(.5, point_scale - 1, 1),
-                                    latent_trait = data_for_jags$grade)))
+                                         latent_trait = data_for_jags$grade)))
     }
-    if (!is.null(id_section)) {
+    if (!is.null(id_panel)) {
       inits <- lapply(inits,
                       function(I)
-                        c(I, list(tau_section = runif(1, 10^(-6), 2),
+                        c(I, list(tau_panel = runif(1, 10^(-6), 2),
                                   section_intercept =
                                     runif(data_for_jags$n_section, -2, 2))))
     }
@@ -820,7 +845,7 @@ get_mcmc_samples <- function(data, id_application, id_voter,
     # If overdispersed starting values are used:
     inits <-
       get_inits_overdispersed_four_chains(
-        merging_sections = !is.null(id_section),
+        merging_sections = !is.null(id_panel),
         ordinal_scale = ordinal_scale,
         point_scale = point_scale,
         heterogeneous_residuals = heterogeneous_residuals,
@@ -833,96 +858,47 @@ get_mcmc_samples <- function(data, id_application, id_voter,
 
   ## Build the jags model
   #######################
-  mod1 <- jags.model(file = path_to_jags_model,
-                     data = data_for_jags,
-                     n.chains = n_chains, n.adapt = n_adapt,
-                     inits = inits,
-                     quiet = TRUE)
+  samps1 <-
+    run.jags(path_to_jags_model,
+             data = data_for_jags, n.chains = n_chains, adapt = n_adapt,
+             burnin = n_burnin, inits = inits, monitor = variables,
+             sample = n_iter, method = runjags_method, silent.jags = TRUE)
 
-  update(mod1, n_burnin)
-
-  samps1 <- coda.samples(mod1, variable.names = variables,
-                         n.iter = n_iter, quiet = TRUE)
-
-  # Get the Rhat values and see if max is lower than rhat_threshold:
-  # do not perform multivariate computation since this sometimes leads to
-  # error messages and we do not need that result
-  # use the whole series, not only the second half (autoburnin = FALSE)
-  rhat <- gelman.diag(samps1, autoburnin = FALSE,
-                      multivariate = FALSE)$psrf[ ,1]
-
-  update <- multiplier <- 1
-  multiplicative <- c(sapply(1:7, function(i) c(i - 1, i -1)))
-  while (max(rhat, na.rm = TRUE) > rhat_threshold & # update <= 5 &
-         (n_iter * (5 * 2^((1 + update)%%2) *
-                    10 ^ multiplicative[update]) <= max_iter)) {
-    multiplier <- 5 * 2^((1 + update)%%2) * 10 ^ multiplicative[update]
-    # First we double the adaptation, burnin and inits:
-    # (the first round double, then times 4, 6, 10 and 15 times)
-    mod1 <- jags.model(file = path_to_jags_model,
-                       data = data_for_jags,
-                       n.chains = n_chains,
-                       n.adapt = n_adapt * multiplier,
-                       inits = inits,
-                       quiet = TRUE)
-    if (!quiet) {
-      print(paste0("Max. rhat: ", round(max(rhat), 2), ". Chain(s) is (are) ",
-                   "rerun with higher adaptation and burnin phases and ",
-                   "more iterations. Update number ", update, "."))
-    }
-    update(mod1, n_burnin * multiplier)
-
-    samps1 <- coda.samples(mod1, variable.names = variables,
-                           n.iter = n_iter*multiplier, quiet = TRUE)
-
-    # Get the Rhat values and check again (for the next loop) if max is lower
-    # than rhat_threshold:
-    rhat <- gelman.diag(samps1, autoburnin = FALSE,
-                        multivariate = FALSE)$psrf[ ,1]
-    update <- update + 1
+  # Extend the jags model if needed
+  counter <- 1
+  while (any(summary(samps1)[, "psrf"] > rhat_threshold) &
+         counter * n_iter <= max_iter){
+    print(paste0("Extension JAGS samples number ", counter, "."))
+    samps1 <- extend.jags(samps1,  sample = n_iter, method = runjags_method)
+    counter <- counter + 1
   }
 
   if (dont_bind) {
     mcmc_samples <- mcmc(samps1)
-  } else mcmc_samples <- mcmc(do.call(rbind, samps1))
+  } else mcmc_samples <- mcmc(do.call(rbind, samps1$mcmc))
 
-  if (max(rhat, na.rm = TRUE) > rhat_threshold) {
+  if (any(summary(samps1)[, "psrf"] > rhat_threshold)) {
     print(paste0(
-      "Caution: Even after increasing the adaption phase to ",
-      n_adapt * multiplier, " iterations, the burnin phase to ",
-      n_burnin * multiplier,
-      " and the number of iterations to ",
-      n_iter * multiplier, " the max of the Rhat values is ",
-      round(max(rhat, na.rm = TRUE), 2),
+      "Caution: Even after extending the JAGS iterations to ",
+      counter * n_iter, " the max of the Rhat values is ",
+      round(max(summary(samps1)[,"psrf"], na.rm = TRUE), 3),
       " e.g. > ", rhat_threshold, ". The problematic parameter(s) is (are): ",
-      paste0(names(rhat[which(rhat > rhat_threshold)]), collapse = ", "), "."))
+      paste0(names(summary(samps1)[,"psrf"][which(summary(samps1)[,"psrf"] >
+                                                    rhat_threshold)]),
+             collapse = ", "), "."))
   }
 
-  if (compute_ess) {
-    if (!dont_bind) {
-      ess <- effectiveSize(mcmc_samples)
-      sd <- apply(mcmc_samples, MARGIN = 2, FUN = sd)
-      mcmc_error <- sd/sqrt(ess)
-    } else {
-      ess <- effectiveSize(mcmc(do.call(rbind, mcmc_samples)))
-      sd <- apply(do.call(rbind, mcmc_samples), MARGIN = 2, FUN = sd)
-      mcmc_error <- sd/sqrt(ess)
-    }
-  } else {
-    ess <- "Effective sample size not computed"
-    mcmc_error <- "MCMC error not computed"
-  }
 
   return(list(samples = mcmc_samples,
               n_chains = n_chains,
-              n_adapt = n_adapt * ifelse(update > 1, multiplier, 1),
-              n_burnin = n_burnin * ifelse(update > 1, multiplier, 1),
-              n_iter = n_iter * ifelse(update > 1, multiplier, 1),
+              n_adapt = n_adapt,
+              n_burnin = n_burnin,
+              n_iter = n_iter * counter,
               conv_status =
-                ifelse(max(rhat, na.rm = TRUE) > rhat_threshold,
+                ifelse(max(summary(samps1)[,"psrf"],
+                           na.rm = TRUE) > rhat_threshold,
                        paste0("Problem max rhat > ", rhat_threshold),
                        paste0("Converged (with threshold set to ",
                               rhat_threshold, ")")),
-              ess = ess,
-              mcmc_error = mcmc_error))
+              summary = summary(samps1)))
 }

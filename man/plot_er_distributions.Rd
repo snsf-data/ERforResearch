@@ -16,7 +16,7 @@ plot_er_distributions(
   ylab = "Expected Ranks",
   number_fundable = NULL,
   outer_show = TRUE,
-  size_pt = 1.5,
+  size_pt = 1.75,
   size_outer = 0.5,
   size_inner = 2,
   alpha_inner = 0.5,

@@ -2,27 +2,27 @@
 % Please edit documentation in R/jags_functions.R
 \name{get_mcmc_samples}
 \alias{get_mcmc_samples}
-\title{Mcmc samples}
+\title{MCMC samples}
 \usage{
 get_mcmc_samples(
   data,
-  id_application,
-  id_voter,
+  id_proposal,
+  id_assessor,
   grade_variable,
   path_to_jags_model = NULL,
   n_chains = 4,
-  n_iter = 5000,
-  n_burnin = 1000,
+  n_iter = 10000,
+  n_burnin = 4000,
   n_adapt = 1000,
-  id_section = NULL,
+  id_panel = NULL,
   max_iter = 1e+06,
-  theta_name = "application_intercept",
-  tau_name = "tau_application",
+  theta_name = "proposal_intercept",
+  tau_name_proposal = "tau_proposal",
   sigma_name = "sigma",
-  tau_voter_name = "tau_voter",
-  tau_section_name = "tau_section",
+  tau_name_assessor = "tau_assessor",
+  tau_name_panel = "tau_panel",
   rank_theta_name = "rank_theta",
-  voter_name = "voter_intercept",
+  assessor_name = "assessor_intercept",
   ordinal_scale = FALSE,
   point_scale = NULL,
   heterogeneous_residuals = FALSE,
@@ -30,134 +30,177 @@ get_mcmc_samples(
   quiet = FALSE,
   dont_bind = FALSE,
   inits_type = "random",
-  variables_to_sample = "default",
   names_variables_to_sample = NULL,
   initial_values = NULL,
-  compute_ess = FALSE,
-  maximal_testing = FALSE,
-  rhat_threshold = 1.01
+  rhat_threshold = 1.01,
+  runjags_method = "parallel"
 )
 }
 \arguments{
-\item{data}{long data frame with all information as in the jags model
-defined below.}
+\item{data}{long data frame with all needed variables as specified in the
+JAGS model defined in the text file with path given in `path_to_jags_model`.}
 
-\item{id_application}{the name of the application variable in the data}
+\item{id_proposal}{the name of the variable in `data` that indicates the ID
+of the evaluated proposal.}
 
-\item{id_voter}{the name of the voter variable in the data (default = NULL)}
+\item{id_assessor}{the name of the variable in `data` that indicates the ID
+of the assessor. The default `= NULL`, for the case where each assessor only
+evaluates/grades one proposal.}
 
-\item{grade_variable}{the name of the outcome variable}
+\item{grade_variable}{the name of the variable in `data` with the outcome
+variable, \textit{i.e.} the grade or score.}
 
-\item{path_to_jags_model}{the path to the jags txt file, if null, the
-default model is used. (default = NULL)}
+\item{path_to_jags_model}{the path to text file including the JAGS model
+definition. By default `= NULL`, and the function will use a default model as
+implemented in the package; in `get_default_jags_model()`.}
 
-\item{n_chains}{number of chains for the JAGS sampler. The default number of
-chains is set to four. This creates optimal conditions and should not be
-changed.}
+\item{n_chains}{the number of chains for the JAGS sampler. The default number
+of chains is set to four. This creates optimal conditions and should not be
+changed. The same parameter in `runjags::run.jags()` is called `n.chains`.}
 
-\item{n_iter}{how many iterations used in the JAGS sampler?
-(default = 5000)}
+\item{n_iter}{how many iterations should be used in the JAGS sampler? This is
+the same as `sample` in the `runjags::run.jags()` function. It is set to
+`10000` by default.}
 
-\item{n_burnin}{number of burnin iterations discarded. (default = 1000)}
+\item{n_burnin}{the number of burnin iterations which will not be included in
+the adaptation phase. By default it is set to `4000` and the same parameter
+in `runjags::run.jags()` is called `burnin`.}
 
-\item{n_adapt}{number of iterations discarded for the adaptation phase.
-(default = 1000)}
+\item{n_adapt}{the number of adaptive iterations discarded for the adaptation
+phase. By default it is set to `1000`. The same parameter in
+`runjags::run.jags()` is called `adapt`.}
 
-\item{id_section}{name of the section}
+\item{id_panel}{the name of the variable in `data` that indicates the ID
+of the panel. The default `= NULL`, for the case where all proposals were
+evaluated in the same panel, or were each panel creates its own ranking.
+In the other scenario, a ranking would be established combining or merging
+all panels.}
 
-\item{max_iter}{maximum number of iteration (default = 1 million)}
+\item{max_iter}{the maximum number of iteration. The JAGS sample will be
+extended until convergence of the chains. To ensure that the sampler does not
+run and extend forever a maximum number of iterations per chain can be
+defined. Once this number of iterations is achieved, the sampler will not be
+further extended. By default, the function allows up to `1000000` iterations
+before stopping.}
 
-\item{theta_name}{the name of the application identifier in the JAGS model.
-(default = application_intercept")}
+\item{theta_name}{the name of the proposal intercept in the JAGS model.
+The default that also goes with the default JAGS model build in the package
+is `proposal_intercept`.}
 
-\item{tau_name}{name of the tau in the jags model, being the standard error
-of the application effects (default = tau_application).}
+\item{sigma_name}{name of the standard deviation of the full model. The
+default that also goes with the default JAGS model build in the package is
+`sigma`.}
 
-\item{sigma_name}{name of the standard deviation of the full model.
-(default = sigma)}
+\item{tau_name_assessor}{name of the standard error of the assessor effect in
+the JAGS model.  The default that also goes with the default JAGS model build
+in the package is `tau_assessor`.}
 
-\item{tau_voter_name}{name of the standard error of the voter effect
-(default = tau_voter).}
+\item{rank_theta_name}{the name of the rank of theta in the JAGS model. The
+default that also goes with the default JAGS model build in the package is
+`rank_theta`.}
 
-\item{tau_section_name}{name of the standard error of the section effect, if
-needed (default = tau_section).}
-
-\item{rank_theta_name}{the name of the rank of theta in the JAGS model
-(default = rank_theta)}
-
-\item{voter_name}{the name of the voter intercept in the JAGS model (default
-= voter_intercept).}
+\item{assessor_name}{the name of the assessor intercept in the JAGS model.
+The default that also goes with the default JAGS model build in the package
+is `assessor_intercept`.}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
-outcome is on an ordinal scale (default = FALSE)}
+outcome is on an ordinal scale. By default, we assume a numeric scale and
+this parameter is set to `FALSE`.}
 
 \item{point_scale}{integer informing us on the number of points of the
-ordinal scale; not needed for continuous scale (default = NULL)}
+ordinal scale; not needed for continuous scale. By default, we assume a
+numeric scale and do not need this information and the  parameter is set to
+`NULL`.}
 
 \item{heterogeneous_residuals}{dummy variable informing us on whether or not
-the residuals should be heterogeneous (in this case you have to update the
-JAGS model too, default = FALSE)}
+the residuals should be heterogeneous. By default the residuals are assumed
+homogeneous and this parameter is set to `FALSE`.}
 
-\item{seed}{set a seed for the JAGS model (default = 1991)}
+\item{seed}{the seed for the JAGS model (default = `1991`). This seed will
+generate the seeds for the JAGS samplers, which ensures reproducibility; see
+also Details.}
 
 \item{quiet}{if the default model is used this function generates a warning.
-if quiet = TRUE, this warning is not shown}
+if `quiet = TRUE`, the warning is not shown.}
 
-\item{dont_bind}{if TRUE the different chains are not pooled, and the MCMC
-object is returned as it is (default = FALSE).}
+\item{dont_bind}{setting this parameter to `TRUE` will pool all the chains
+together before returning the MCMC. By default it is however set to `FALSE`.}
 
-\item{inits_type}{type of the initial values, default is "random", but if two
-chains are used, the initial values can also be  "overdispersed"}
+\item{inits_type}{the type of the initial values. By default the initial
+values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+Alternatively, if four chains are used, the initial values can also be
+`"overdispersed"`.}
 
-\item{variables_to_sample}{should the default variables be samples, or will
-they be "specified" (in names_variables_to_sample), default is "default".}
-
-\item{names_variables_to_sample}{if variables to sample are specified, write
-their names here, as a character-vector, default is NULL.}
+\item{names_variables_to_sample}{the variables to sample can be specified,
+writin their names here, as a character-vector. The default is `NULL` and
+the default variables are used.}
 
 \item{initial_values}{The list of initial values for the jags sampler can be
-provided directly}
-
-\item{compute_ess}{Should the effective sample size and the mcmc errors be
-calculated? (default = FALSE)}
-
-\item{maximal_testing}{should the rhat of all parameters be computed (TRUE),
-or just the essential ones (FALSE)? (default = FALSE)}
+provided directly. Otherwise `get_inits_overdispersed_four_chains` for the
+overdispersed version is used, or they are randomly selected. Always using a
+seed to ensure computational reproducibility.}
 
 \item{rhat_threshold}{the threshold for rhat to decide whether or not the
-chains converged. Gelman suggested 1.1, but the smaller the better
-(default = 1.01).}
+chains converged. Gelman suggested 1.1, but the smaller the better. Hence
+this functions threshold is set to `1.01` by default.}
+
+\item{runjags_method}{the method with which to call JAGS (from
+`runjags::run.jags()` with the default being set to `parallel`).}
+
+\item{tau_name_proposal_proposal}{the name of tau in the JAGS model, being the
+standard error of the proposal effects. The default that also goes with the
+default JAGS model build in the package is `tau_proposal`.}
+
+\item{tau_panel_name}{the name of the standard error of the panel effect, if
+needed. The default that also goes with the default JAGS model build in the
+package is `tau_panel`. This is only needed if a ranking has to be
+established combining or merging all panels, and therefore only important if
+`id_panel` is not `NULL`.}
 }
 \value{
-The function returns a list with: a matrix with the samples for all
- parameters defined in the model, and more information on the number of
- chains, and the length of the adaptation, iteration and burnin phase, and
- an indicator on whether or not the chains converged (according to Rhat being
- smaller than `rhat_threshold`). Note that n_iter, burnin, adapt are the
- number per chain. Then, optionally the effective sample size (ess) for the
- relevant parameters is calculated as well as the MCMC error
- (= sd(parameter)/sqrt(ess)) and added to the list.
+The function returns a list with: the MCMC samples in `samples` for
+all parameters defined in the model, more information on the number of
+chains, and the length of the adaptation, iteration and burnin phase, and
+an indicator on whether or not the chains converged (according to all Rhats
+being smaller than `rhat_threshold`). Additionally a summary report matrix
+from `runjags::run.jags` is included (in `summary`) for each sampled
+parameter with, among others, the effective sample size, MCerror, and rhat
+values.
 }
 \description{
-Helper function to get the mcmc samples. The function tests convergence
-diagnostics at the same time. Find more in Details.
+Helper function to get the mcmc samples. It is essentially a function wrapped
+around the function `runjags::run.jags()`. The function also tests
+convergence of the chains and extends them until convergence is achieved.
+Find more in Details.
 }
 \details{
-Note that a convergence test is applied in this function: If with
+A note on convergence:
+
+#' Note that a convergence test is applied in this function: If with
 the specified length of adaptation and burnin phase together with the number
 of specified iterations not all Rhat values are below `rhat_threshold`, the
 latter Ns (n_adapt, n_burnin, and n_iter) are multiplied by multiplied by 5,
 10, 5x10, 10x10, 5x10^2, 10x10^2, etc, until either all Rhat values are
 below `rhat_threshold`or the number of iteration would exceed max_iter. If
 the Rhat values are still not all small enough a warning message is printed.
+
+A note on reproducibility:
+
+To ensure reproducibility of the chains, all parameters need explicit
+starting values and each chain needs an explicitly selected random samplers
+(`.RNG.name`) and an explicitly selected seed (`.RNG.seed`). For four chains
+the samplers are chosen among `base::Wichmann-Hill`,
+`base::Marsaglia-Multicarry`, `base::Super-Duper`, `base::Mersenne-Twister`.
+For more, or less than four chains a sample (with or without replacement) of
+these samplers is selected.
 }
 \examples{
 data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
 \dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
-                                 id_application = "application",
-                                 id_voter = "voter",
+                                 id_proposal = "application",
+                                 id_assessor = "voter",
                                  grade_variable = "num_grade")
                                  }
 }
