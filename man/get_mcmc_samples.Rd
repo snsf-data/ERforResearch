@@ -37,8 +37,9 @@ get_mcmc_samples(
 )
 }
 \arguments{
-\item{data}{long data frame with all needed variables as specified in the
-JAGS model defined in the text file with path given in `path_to_jags_model`.}
+\item{data}{data frame, in long format, with all needed variables as
+specified in the JAGS model defined in the text file with path given in
+`path_to_jags_model`.}
 
 \item{id_proposal}{the name of the variable in `data` that indicates the ID
 of the evaluated proposal.}
@@ -87,6 +88,10 @@ before stopping.}
 The default that also goes with the default JAGS model build in the package
 is `proposal_intercept`.}
 
+\item{tau_name_proposal}{the name of tau in the JAGS model, being the
+standard error of the proposal effects. The default that also goes with the
+default JAGS model build in the package is `tau_proposal`.}
+
 \item{sigma_name}{name of the standard deviation of the full model. The
 default that also goes with the default JAGS model build in the package is
 `sigma`.}
@@ -94,6 +99,12 @@ default that also goes with the default JAGS model build in the package is
 \item{tau_name_assessor}{name of the standard error of the assessor effect in
 the JAGS model.  The default that also goes with the default JAGS model build
 in the package is `tau_assessor`.}
+
+\item{tau_name_panel}{the name of the standard error of the panel effect, if
+needed. The default that also goes with the default JAGS model build in the
+package is `tau_panel`. This is only needed if a ranking has to be
+established combining or merging all panels, and therefore only important if
+`id_panel` is not `NULL`.}
 
 \item{rank_theta_name}{the name of the rank of theta in the JAGS model. The
 default that also goes with the default JAGS model build in the package is
@@ -146,16 +157,6 @@ this functions threshold is set to `1.01` by default.}
 
 \item{runjags_method}{the method with which to call JAGS (from
 `runjags::run.jags()` with the default being set to `parallel`).}
-
-\item{tau_name_proposal_proposal}{the name of tau in the JAGS model, being the
-standard error of the proposal effects. The default that also goes with the
-default JAGS model build in the package is `tau_proposal`.}
-
-\item{tau_panel_name}{the name of the standard error of the panel effect, if
-needed. The default that also goes with the default JAGS model build in the
-package is `tau_panel`. This is only needed if a ranking has to be
-established combining or merging all panels, and therefore only important if
-`id_panel` is not `NULL`.}
 }
 \value{
 The function returns a list with: the MCMC samples in `samples` for
@@ -199,8 +200,8 @@ data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
 \dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
-                                 id_proposal = "application",
-                                 id_assessor = "voter",
+                                 id_proposal = "proposal",
+                                 id_assessor = "assessor",
                                  grade_variable = "num_grade")
                                  }
 }

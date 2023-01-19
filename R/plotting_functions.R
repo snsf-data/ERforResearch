@@ -10,8 +10,8 @@
 #' @param how_many_fundable number of proposals that can be funded?
 #' (default = NULL) If Null, the graph will be black and white only
 #' @param title beginning of the plot title (default = " ")
-#' @param id_application the name of the variable giving the distinct
-#' application identifiers. (default = id_application)
+#' @param id_proposal the name of the variable giving the distinct
+#' application identifiers. (default = id_proposal)
 #' @param draw_funding_line should the funding line be drawn? (default = TRUE)
 #' @param x_expand make funding line longer on both sides (default = .3)
 #' @param ordering_increasing should the order of the rank be increasing, from
@@ -51,8 +51,8 @@
 #' filter(panel == "p1")
 #' \dontrun{
 #' ER_results <- get_er_from_jags(data = dat,
-#'                   id_application = "application",
-#'                   id_voter = "voter",
+#'                   id_proposal = "proposal",
+#'                   id_assessor = "assessor",
 #'                   grade_variable = "num_grade",
 #'                   n_chains = 2, n_iter = 1000,
 #'                   n_burnin = 1000)
@@ -60,7 +60,7 @@
 #' }
 #' @export
 plotting_er_results <- function(er_results,
-                                id_application = "id_application",
+                                id_proposal = "id_proposal",
                                 how_many_fundable = NULL,
                                 title = "",
                                 ordering_increasing = TRUE,
@@ -127,23 +127,23 @@ plotting_er_results <- function(er_results,
                                  levels = c("Fixed", "ER")))
   }
   dat_for_plot <- dat_for_plot %>%
-    rename(application_number = eval(id_application))
+    rename(proposal_number = eval(id_proposal))
 
   start_plot <- dat_for_plot %>%
     ggplot(aes(x = .data$which_rank, y = .data$rank,
-               group = .data$application_number))
+               group = .data$proposal_number))
 
   if (!is.null(how_many_fundable)) {
     start_plot <- dat_for_plot %>%
       ggplot(aes(x = .data$which_rank, y = .data$rank,
-                 group = .data$application_number, color = .data$funded))
+                 group = .data$proposal_number, color = .data$funded))
   }
 
   if (result_show) {
     start_plot <- start_plot +
       geom_text_repel(aes(label = ifelse(.data$which_rank == "ER" &
                                            !easy_numbering,
-                                         .data$application_number,
+                                         .data$proposal_number,
                                          ifelse(.data$which_rank == "ER" &
                                                   easy_numbering,
                                                 .data$numbering, ""))),
@@ -173,7 +173,7 @@ plotting_er_results <- function(er_results,
       geom_line(data =
                   tibble(which_rank = c(0 + x_expand, 2, 4 - x_expand),
                          rank = c(rep(how_many_fundable + .1, 2), er_fl),
-                         application_number = rep(1,3)),
+                         proposal_number = rep(1,3)),
                 color = color_fl, linetype = line_type_fl, alpha = alpha_fl,
                 size = size_fl)
   }
@@ -202,52 +202,103 @@ plotting_er_results <- function(er_results,
 #' Rankogram
 #'
 #' This function produces a rankogram
-#' @param data long data frame with all information as in the jags model
-#' defined below.
-#' @param id_application the name of the application variable in the data
-#' @param id_voter the name of the voter variable in the data (default = NULL)
-#' @param grade_variable the name of the outcome variable
-#' (default = "num_grade")
-#' @param path_to_jags_model the path to the jags txt file, if null, the
-#' default model is used. (default = NULL)
-#' @param n_iter how many iterations used in the JAGS sampler?
-#'  (default = 5000)
-#' @param n_chains number of chains for the JAGS sampler. (default = 2)
-#' @param n_adapt number of iterations discarded for the adaptation phase.
-#'  (default = 1000)
-#' @param n_burnin number of burnin iterations discarded. (default = 1000)
-#' @param id_section name of the section
-#' @param rank_theta_name the name of the rank of theta in the Bayesian model.
-#' (default = rank_theta")
-#' @param theta_name the name of the application identifier. (default =
-#' "application_intercept")
-#' @param voter_name the name of the voter intercept in the JAGS model (default
-#' = voter_intercept).
-#' @param tau_name name of tau in the JAGS model, being the precision of the
-#' random effects, in the jags model. (default = sd_application)
-#' @param tau_voter_name name of the standard error of the voter effect.
-#' (default = tau_voter)
-#' @param tau_section_name name of the strandard error of the section effect, if
-#' needed (default = NULL).
-#' @param sigma_name name of the standard error of th term (default = sigma)
+#'
+#' @param data data frame, in long format, with all needed variables as
+#' specified in the JAGS model defined in the text file with path given in
+#' `path_to_jags_model`.
 #' @param cumulative_rank_prob should the cumulative ranking probabilities be
 #' represented instead
+#' @param path_to_jags_model the path to text file including the JAGS model
+#' definition. By default `= NULL`, and the function will use a default model as
+#' implemented in the package; in `get_default_jags_model()`.
+#' @param n_iter how many iterations should be used in the JAGS sampler? This is
+#' the same as `sample` in the `runjags::run.jags()` function. It is set to
+#' `10000` by default.
+#' @param n_chains the number of chains for the JAGS sampler. The default number
+#' of chains is set to four. This creates optimal conditions and should not be
+#' changed. The same parameter in `runjags::run.jags()` is called `n.chains`.
+#' @param n_adapt the number of adaptive iterations discarded for the adaptation
+#' phase. By default it is set to `1000`. The same parameter in
+#' `runjags::run.jags()` is called `adapt`.
+#' @param n_burnin the number of burnin iterations which will not be included in
+#' the adaptation phase. By default it is set to `4000` and the same parameter
+#' in `runjags::run.jags()` is called `burnin`.
+#' @param max_iter the maximum number of iteration. The JAGS sample will be
+#' extended until convergence of the chains. To ensure that the sampler does not
+#' run and extend forever a maximum number of iterations per chain can be
+#' defined. Once this number of iterations is achieved, the sampler will not be
+#' further extended. By default, the function allows up to `1000000` iterations
+#' before stopping.
+#' @param id_proposal the name of the variable in `data` that indicates the ID
+#' of the evaluated proposal.
+#' @param id_assessor the name of the variable in `data` that indicates the ID
+#' of the assessor. The default `= NULL`, for the case where each assessor only
+#' evaluates/grades one proposal.
+#' @param id_panel the name of the variable in `data` that indicates the ID
+#' of the panel. The default `= NULL`, for the case where all proposals were
+#' evaluated in the same panel, or were each panel creates its own ranking.
+#' In the other scenario, a ranking would be established combining or merging
+#' all panels.
+#' @param grade_variable the name of the variable in `data` with the outcome
+#' variable, \textit{i.e.} the grade or score.
+#' @param theta_name the name of the proposal intercept in the JAGS model.
+#' The default that also goes with the default JAGS model build in the package
+#' is `proposal_intercept`.
+#' @param tau_name_proposal the name of tau in the JAGS model, being the
+#' standard error of the proposal effects. The default that also goes with the
+#' default JAGS model build in the package is `tau_proposal`.
+#' @param tau_name_assessor name of the standard error of the assessor effect in
+#' the JAGS model.  The default that also goes with the default JAGS model build
+#' in the package is `tau_assessor`.
+#' @param rank_theta_name the name of the rank of theta in the JAGS model. The
+#' default that also goes with the default JAGS model build in the package is
+#' `rank_theta`.
+#' @param assessor_name the name of the assessor intercept in the JAGS model.
+#' The default that also goes with the default JAGS model build in the package
+#' is `assessor_intercept`.
+#' @param tau_name_panel the name of the standard error of the panel effect, if
+#' needed. The default that also goes with the default JAGS model build in the
+#' package is `tau_panel`. This is only needed if a ranking has to be
+#' established combining or merging all panels, and therefore only important if
+#' `id_panel` is not `NULL`.
+#' @param sigma_name name of the standard deviation of the full model. The
+#' default that also goes with the default JAGS model build in the package is
+#' `sigma`.
 #' @param ordinal_scale dummy variable informing us on whether or not the
-#' outcome is on an ordinal scale (default = FALSE)
+#' outcome is on an ordinal scale. By default, we assume a numeric scale and
+#' this parameter is set to `FALSE`.
 #' @param point_scale integer informing us on the number of points of the
-#' ordinal scale; not needed for continuous scale (default = NULL)
+#' ordinal scale; not needed for continuous scale. By default, we assume a
+#' numeric scale and do not need this information and the  parameter is set to
+#' `NULL`.
 #' @param heterogeneous_residuals dummy variable informing us on whether or not
-#' the residuals should be heterogeneous (in this case you have to update the
-#' JAGS model too, default = FALSE)
-#' @param mcmc_samples if the mcmc sample has already been run (default = NULL).
-#' @param inits_type type of the initial values, default is "random", but if two
-#' chains are used, the initial values can also be  "overdispersed"
-#' @param initial_values The list of initial values for the jags sampler can be
-#' provided directly
-#' @param seed set a seed for the JAGS model (default = 1991)
+#' the residuals should be heterogeneous. By default the residuals are assumed
+#' homogeneous and this parameter is set to `FALSE`.
+#' @param seed the seed for the JAGS model (default = `1991`). This seed will
+#' generate the seeds for the JAGS samplers, which ensures reproducibility; see
+#' also Details.
 #' @param quiet if the default model is used this function generates a warning.
-#' if quiet = TRUE, this warning is not shown
-#' @import rjags
+#' if `quiet = TRUE`, the warning is not shown.
+#' @param dont_bind setting this parameter to `TRUE` will pool all the chains
+#' together before returning the MCMC. By default it is however set to `FALSE`.
+#' @param inits_type the type of the initial values. By default the initial
+#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' Alternatively, if four chains are used, the initial values can also be
+#' `"overdispersed"`.
+#' @param names_variables_to_sample the variables to sample can be specified,
+#' writin their names here, as a character-vector. The default is `NULL` and
+#' the default variables are used.
+#' @param initial_values The list of initial values for the jags sampler can be
+#' provided directly. Otherwise `get_inits_overdispersed_four_chains` for the
+#' overdispersed version is used, or they are randomly selected. Always using a
+#' seed to ensure computational reproducibility.
+#' @param rhat_threshold the threshold for rhat to decide whether or not the
+#' chains converged. Gelman suggested 1.1, but the smaller the better. Hence
+#' this functions threshold is set to `1.01` by default.
+#' @param runjags_method the method with which to call JAGS (from
+#' `runjags::run.jags()` with the default being set to `parallel`).
+#'
+#' @import runjags
 #' @import dplyr
 #' @importFrom utils head
 #'
@@ -255,36 +306,40 @@ plotting_er_results <- function(er_results,
 #' probabilities)
 #'
 #' @export
-plot_rankogram <- function(data, id_application, id_voter,
+plot_rankogram <- function(data,
+                           cumulative_rank_prob = FALSE,
+                           id_proposal, id_assessor,
                            grade_variable = "num_grade",
                            path_to_jags_model = NULL,
-                           n_chains = 2, n_iter = 5000,
-                           n_burnin = 1000, n_adapt = 1000,
-                           id_section = NULL,
-                           rank_theta_name = "rank_theta",
-                           theta_name = "application_intercept",
-                           voter_name = "voter_intercept",
-                           tau_name = "tau_application",
-                           tau_voter_name = "tau_voter",
-                           tau_section_name = NULL,
+                           n_chains = 4, n_iter = 10000,
+                           n_burnin = 4000, n_adapt = 1000,
+                           id_panel = NULL, max_iter = 1000000,
+                           theta_name = "proposal_intercept",
+                           tau_name_proposal = "tau_proposal",
                            sigma_name = "sigma",
-                           cumulative_rank_prob = FALSE,
+                           tau_name_assessor = "tau_assessor",
+                           tau_name_panel = "tau_panel",
+                           rank_theta_name = "rank_theta",
+                           assessor_name = "assessor_intercept",
                            ordinal_scale = FALSE,
-                           heterogeneous_residuals = FALSE,
                            point_scale = NULL,
-                           inits_type = "random",
+                           heterogeneous_residuals = FALSE,
+                           seed = 1991, quiet = FALSE,
+                           dont_bind = FALSE,
+                           inits_type = "random", # or "overdispersed"
+                           names_variables_to_sample = NULL,
                            initial_values = NULL,
-                           mcmc_samples = NULL,
-                           seed = 1991, quiet = FALSE) {
+                           rhat_threshold = 1.01,
+                           runjags_method = "parallel") {
 
-  n_application <- data %>%
-    dplyr::pull(get(id_application)) %>%
+  n_proposal <- data %>%
+    dplyr::pull(get(id_proposal)) %>%
     unique() %>%
     length()
 
   overall_mean <- data %>%
     mutate(num_grade = grade_variable) %>%
-    group_by(get(id_application)) %>%
+    group_by(get(id_proposal)) %>%
     summarise(av = mean(.data$num_grade, na.rm = TRUE)) %>%
     dplyr::pull(.data$av) %>%
     mean()
@@ -292,28 +347,32 @@ plot_rankogram <- function(data, id_application, id_voter,
   # If no MCMC samples are provided, they are computed here:
   if (is.null(mcmc_samples)) {
     mcmc_samples <- get_mcmc_samples(data = data,
-                                     id_application = id_application,
-                                     id_voter = id_voter,
+                                     id_proposal = id_proposal,
+                                     id_assessor = id_assessor,
                                      grade_variable = grade_variable,
                                      path_to_jags_model = path_to_jags_model,
                                      n_chains = n_chains, n_iter = n_iter,
                                      n_adapt = n_adapt, n_burnin = n_burnin,
-                                     id_section = id_section,
+                                     max_iter = max_iter,
+                                     id_panel = id_panel,
                                      theta_name = theta_name,
-                                     voter_name = voter_name,
-                                     tau_name = tau_name,
-                                     tau_voter_name = tau_voter_name,
-                                     tau_section_name = tau_section_name,
-                                     sigma_name = sigma_name,
                                      rank_theta_name = rank_theta_name,
+                                     assessor_name = assessor_name,
+                                     tau_name_proposal = tau_name_proposal,
+                                     tau_assessor_name = tau_assessor_name,
+                                     tau_panel_name = tau_panel_name,
+                                     sigma_name = sigma_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
                                      heterogeneous_residuals =
                                        heterogeneous_residuals,
                                      inits_type = inits_type,
                                      initial_values = initial_values,
+                                     names_variables_to_sample =
+                                       names_variables_to_sample,
                                      seed = seed, quiet = quiet,
-                                     compute_ess = FALSE) # no need)
+                                     rhat_threshold = rhat_threshold,
+                                     runjags_method = runjags_method)
   } else {
     if (length(mcmc_samples) != 8) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
@@ -322,7 +381,7 @@ plot_rankogram <- function(data, id_application, id_voter,
   }
 
   colnames_rank_theta <- paste0(rank_theta_name, "[",
-                                seq_len(n_application), "]")
+                                seq_len(n_proposal), "]")
   if (is.list(mcmc_samples$samples)) {
     mcmc_samples_rank_thetas <-
       do.call(rbind, mcmc_samples$samples)[, colnames_rank_theta]
@@ -332,10 +391,10 @@ plot_rankogram <- function(data, id_application, id_voter,
   }
 
   # Calculate the P(j = b) for the SUCRA:
-  p_j_b <- matrix(NA, nrow = n_application, ncol = n_application)
+  p_j_b <- matrix(NA, nrow = n_proposal, ncol = n_proposal)
 
-  for (i in seq_len(n_application)) {
-    for (j in seq_len(n_application)) {
+  for (i in seq_len(n_proposal)) {
+    for (j in seq_len(n_proposal)) {
       p_j_b[i, j] <- mean(mcmc_samples_rank_thetas[, i] == j)
     }
   }
@@ -346,7 +405,7 @@ plot_rankogram <- function(data, id_application, id_voter,
 
   colnames(p_j_b) <- seq_len(ncol(p_j_b))
   rownames(p_j_b) <- data %>%
-    dplyr::pull(get(id_application)) %>%
+    dplyr::pull(get(id_proposal)) %>%
     unique()
 
   if (!cumulative_rank_prob) {
@@ -364,7 +423,7 @@ plot_rankogram <- function(data, id_application, id_voter,
       mean(cumsum(p_j_b[i, -nrow(p_j_b)]))
     })
     names(sucra) <- data %>%
-      dplyr::pull(get(id_application)) %>%
+      dplyr::pull(get(id_proposal)) %>%
       unique()
 
     p_j_b %>%
@@ -379,7 +438,7 @@ plot_rankogram <- function(data, id_application, id_voter,
       ggplot(aes(x = .data$rank, y = .data$cum_prob)) +
       geom_line() +
       labs(x = "Rank", y = "Cumulative probability") +
-      geom_text(aes(x = n_application - 3, y = .5, label =
+      geom_text(aes(x = n_proposal - 3, y = .5, label =
                       paste0("SUCRA: ", round(sucra, 2))),
                 size = 2) +
       theme_minimal() +
@@ -387,7 +446,7 @@ plot_rankogram <- function(data, id_application, id_voter,
   }
 }
 
-#' Voter behavior distributions
+#' Assessor behavior distributions
 #'
 #' This function plots the distibutions of the average voter behavior
 #' (the $mu_j$'s in the model). Make sure that when using the get_mcmc_samples()
@@ -395,10 +454,10 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' sampled from the JAGS model.
 #'
 #' @param get_mcmc_samples_result the mcmc samples
-#' @param n_voters number of voters in the panel / call
+#' @param n_assessors number of voters in the panel / call
 #' @param name_mean the name of the parameter estimating the average voter
 #' behavior (default = "nu").
-#' @param names_voters names of the voters to be written on the y-axis
+#' @param names_assessors names of the voters to be written on the y-axis
 #' ticks (default = "voter").
 #' @param title title of the plot (default = NULL, no title).
 #' @param xlim_min minimum of the x-axis (default = -1).
@@ -406,12 +465,14 @@ plot_rankogram <- function(data, id_application, id_voter,
 #' @param scale for the `geom_density_ridges_gradient()` (default = 1.75).
 #' @return the result is a plot of the posterior distributions of the average
 #' voter behaviors.
+#'
 #' @import ggridges
 #' @importFrom stats median
+#'
 #' @export
-voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
+assessor_behavior_distribution <- function(get_mcmc_samples_result, n_assessors,
                                         name_mean = "nu",
-                                        names_voters = "voter",
+                                        names_assessors = "voter",
                                         title = NULL, xlim_min = -1,
                                         xlim_max = 1,
                                         scale = 1.75){
@@ -423,24 +484,24 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
     samples <- do.call(rbind, get_mcmc_samples_result$samples)
   } else samples <- get_mcmc_samples_result$samples
 
-  voter_behavior_colnames <- paste0(name_mean, "[", seq_len(n_voters), "]")
-  voter_behavior_samples <- samples[, voter_behavior_colnames]
+  assessor_behavior_colnames <- paste0(name_mean, "[", seq_len(n_assessors), "]")
+  assessor_behavior_samples <- samples[, assessor_behavior_colnames]
 
 
-  colnames(voter_behavior_samples) <- paste0(names_voters, " ",
-                                             seq_len(n_voters))
+  colnames(assessor_behavior_samples) <- paste0(names_assessors, " ",
+                                             seq_len(n_assessors))
 
-  voter_behavior_sample_for_plot <- voter_behavior_samples %>%
+  assessor_behavior_sample_for_plot <- assessor_behavior_samples %>%
     as_tibble() %>%
-    pivot_longer(cols = starts_with(names_voters),
+    pivot_longer(cols = starts_with(names_assessors),
                  names_to = "Referee", values_to = "weight") %>%
     group_by(.data$Referee) %>%
     mutate(median = median(.data$weight)) %>%
     ungroup() %>%
     arrange(.data$median)
-  voter_behavior_sample_for_plot %>%
+  assessor_behavior_sample_for_plot %>%
     mutate(Referee = factor(.data$Referee,
-                            levels = voter_behavior_sample_for_plot %>%
+                            levels = assessor_behavior_sample_for_plot %>%
                               select(.data$Referee, .data$median) %>%
                               distinct() %>%
                               dplyr::pull(.data$Referee))) %>%
@@ -451,7 +512,7 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
     xlim(xlim_min, xlim_max) +
     labs(title = title) +
     labs(x = "", y = "") +
-    scale_fill_viridis_c(name = paste(names_voters, "Effect"), option = "C") +
+    scale_fill_viridis_c(name = paste(names_assessors, "Effect"), option = "C") +
     geom_vline(xintercept = 0) +
     theme_minimal() +
     theme(panel.grid.major.y = element_line(size = 0.25, linetype = "solid",
@@ -515,8 +576,8 @@ voter_behavior_distribution <- function(get_mcmc_samples_result, n_voters,
 #'      filter(panel == "p1")
 #' \dontrun{
 #' mcmc_samples <- get_mcmc_samples(data = data_panel1,
-#'                                  id_application = "application",
-#'                                  id_voter = "voter",
+#'                                  id_proposal = "application",
+#'                                  id_assessor = "voter",
 #'                                  grade_variable = "num_grade")
 #' plot_er_distributions(mcmc_samples,
 #'                       n_proposals = data_panel1 %>%

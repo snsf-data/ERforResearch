@@ -6,7 +6,7 @@
 \usage{
 plotting_er_results(
   er_results,
-  id_application = "id_application",
+  id_proposal = "id_proposal",
   how_many_fundable = NULL,
   title = "",
   ordering_increasing = TRUE,
@@ -39,8 +39,8 @@ plotting_er_results(
 \arguments{
 \item{er_results}{the resulting object from the `get_er_from_jags()` function}
 
-\item{id_application}{the name of the variable giving the distinct
-application identifiers. (default = id_application)}
+\item{id_proposal}{the name of the variable giving the distinct
+application identifiers. (default = id_proposal)}
 
 \item{how_many_fundable}{number of proposals that can be funded?
 (default = NULL) If Null, the graph will be black and white only}
@@ -112,8 +112,8 @@ dat <- get_mock_data() \%>\%
 filter(panel == "p1")
 \dontrun{
 ER_results <- get_er_from_jags(data = dat,
-                  id_application = "application",
-                  id_voter = "voter",
+                  id_proposal = "proposal",
+                  id_assessor = "assessor",
                   grade_variable = "num_grade",
                   n_chains = 2, n_iter = 1000,
                   n_burnin = 1000)

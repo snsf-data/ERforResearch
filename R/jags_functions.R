@@ -4,29 +4,45 @@
 
 options(dplyr.summarise.inform = FALSE)
 
-# The model:
 #' Write a default jags model
 #'
-#' This function simply stores a txt file with a default jags model, in a
-#' certain path.
+#' This function writes a default JAGS model, given the parameters and stores it
+#' as a. txt in a certain path.
+#'
 #' @param outcome_variable the nature of the outcome variable: continuous or
-#' ordinal. (default = "continuous")
+#' ordinal.  By default the grades are assumed to be `"continuous"`.
 #' @param residuals the nature of the residuals in the model: homogeneous or
-#' heterogeneous. (default = "homogeneous")
-#' @param subsections the individual votes come from different sub-panels that
-#' need to be merged. (default = FALSE)
-#' @param path where should it be stored, from getwd()? (default = jags_model.txt)
-#' @param quiet if TRUE, do not show messages.
-#' @param nine_point_scale_continuous only needed if nine-point continuous scale
-#' is used (default = FALSE).
-#' @details The model defined here has a random component for the application /
-#' the proposal and the voter / the evaluator. If the parameter subpanels is set
-#' to TRUE an addtional grouping for the section or panel is defined. The user
-#' is invited to write their own model definition if more flexibility is needed.
-#' The path to the latter can then be given as parameter to get_mcmc_samples.
-#' The user can however already decide between a continuous or ordinal outcome
-#' variable, homogeneous or heterogeneous residuals, and with or without
-#' subpanel merging (those options are integrated).
+#' heterogeneous. By default the residuals are assumed to be `"homogeneous"`.
+#' @param subpanels the individual votes come from different sub-panels that
+#' need to be merged. By default this is set to `FALSE` meaning that rankings
+#' are produced for each panel separately.
+#' @param path where should it be stored, relative to getwd()? By default this
+#' is set to `"jags_model.txt"`. Hence it is simply written to the working
+#' directory.
+#' @param quiet if set to `TRUE`, the function does not show any messages of
+#' caution.
+#' @param nine_point_scale_continuous boolean variable indicated whether or not
+#' a nine-point continuous scale is used. By default is is set to `FALSE`, which
+#' means that a six-point scale is used by default. Be aware that those
+#' specifications are due to the usage of the package by the Swiss National
+#' Science Foundation.
+#'
+#' @details
+#' Note that many of the specific default parameters are specified for easy
+#' usage and integration in the funding evaluation system at the Swiss National
+#' Science Foundation and might not be applicable to other evaluation systems.
+#'
+#' The model defined here has a random component for the proposal and
+#' the assessor. If the parameter subpanels is set to TRUE an additional
+#' grouping for the panel is defined. The user is invited to write their own
+#' model definition if more flexibility is needed.
+#'
+#' The path to a user-specified model can then be given as parameter to the
+#' `get_mcmc_samples()` or the `get_er_from_jags()` functions. The user can also
+#' simply decide between a continuous or ordinal outcome variable, homogeneous
+#' or heterogeneous residuals, with or without subpanel merging (those options
+#' are all integrated), write the model in a .txt file and adapt it from there.
+#'
 #' @examples
 #' # The model definition .txt is stored in the file "default_jags_model.txt"
 #' \dontrun{
@@ -36,7 +52,7 @@ options(dplyr.summarise.inform = FALSE)
 get_default_jags_model <- function(outcome_variable = "continuous",
                                    nine_point_scale_continuous = FALSE,
                                    residuals = "homogeneous",
-                                   subsections = FALSE,
+                                   subpanels = FALSE,
                                    path = "default_jags_model.txt",
                                    quiet = FALSE) {
   if (!(outcome_variable %in% c("continuous", "ordinal")) |
@@ -52,93 +68,93 @@ get_default_jags_model <- function(outcome_variable = "continuous",
   }
 
   if (outcome_variable == "continuous" & !nine_point_scale_continuous &
-      residuals == "homogeneous" & !subsections){
+      residuals == "homogeneous" & !subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dnorm(mu[i], inv_sigma2)
                 # inv_sigma2 is precision (1 / variance)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-          voter_intercept[num_application[i], num_voter[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+          assessor_intercept[num_proposal[i], num_assessor[i]]
           }
       # Ranks: (for the expected ranks)
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
       sigma ~ dunif(0.000001, 2)
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      tau_application ~ dunif(0.000001, 2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_voter ~ dunif(0.000001, 2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      tau_proposal ~ dunif(0.000001, 2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_assessor ~ dunif(0.000001, 2)
       }",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "continuous" & nine_point_scale_continuous &
-      residuals == "homogeneous" & !subsections){
+      residuals == "homogeneous" & !subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dnorm(mu[i], inv_sigma2)
                 # inv_sigma2 is precision (1 / variance)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-          voter_intercept[num_application[i], num_voter[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+          assessor_intercept[num_proposal[i], num_assessor[i]]
           }
       # Ranks: (for the expected ranks)
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 1) # 1/(1^2) = 1
       }
       sigma ~ dunif(0.000001, 3)
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      tau_application ~ dunif(0.000001, 3)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_voter ~ dunif(0.000001, 3)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      tau_proposal ~ dunif(0.000001, 3)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_assessor ~ dunif(0.000001, 3)
       }",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "homogeneous" &
-      !subsections){
+      !subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dinterval(latent_trait[i], c[])
           latent_trait[i] ~ dnorm(mu[i], inv_sigma2)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-            voter_intercept[num_application[i], num_voter[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+            assessor_intercept[num_proposal[i], num_assessor[i]]
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
 
@@ -149,47 +165,47 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 
       sigma ~ dunif(0.000001, 2)
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      tau_application ~ dunif(0.000001, 2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_voter ~ dunif(0.000001, 2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      tau_proposal ~ dunif(0.000001, 2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_assessor ~ dunif(0.000001, 2)
     }", file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "continuous" & !nine_point_scale_continuous &
-      residuals == "heterogeneous" & !subsections){
+      residuals == "heterogeneous" & !subpanels){
     cat("model{
      # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
-      grade[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
+      for (i in 1:n) { # i is not the proposal but the review
+      grade[i] ~ dnorm(mu[i], inv_sigma2[num_proposal[i]])
       # inv_sigma2 is precision (1 / variance)
-      mu[i] <- overall_mean + application_intercept[num_application[i]] +
-      voter_intercept[num_application[i], num_voter[i]]
-      # + section_intercept[num_section[i]] # if needed
+      mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+      assessor_intercept[num_proposal[i], num_assessor[i]]
+      # + panel_intercept[num_panel[i]] # if needed
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
         sigma2[j] = max(10^(-6),
-                    exp(alpha + beta * log(mean_application[j]) + omega[j]))
+                    exp(alpha + beta * log(mean_proposal[j]) + omega[j]))
         inv_sigma2[j] = 1/sigma2[j]
         omega[j] ~ dnorm(0, inv_tau_omega2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
 
-      inv_tau_application2 <- pow(tau_application, -2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
       inv_tau_omega2 <- pow(tau_omega, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_application ~ dunif(10^(-6), 2)
-      tau_voter ~ dunif(10^(-6), 2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
       tau_omega ~ dunif(10^(-6), 10)
 
       alpha ~ dnorm(0, 0.01) #T(0.001, 1)
@@ -198,31 +214,31 @@ get_default_jags_model <- function(outcome_variable = "continuous",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "heterogeneous" &
-      !subsections){
+      !subpanels){
     cat("model{
           # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dinterval(latent_trait[i], c[])
-          latent_trait[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-            voter_intercept[num_application[i], num_voter[i]]
+          latent_trait[i] ~ dnorm(mu[i], inv_sigma2[num_proposal[i]])
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+            assessor_intercept[num_proposal[i], num_assessor[i]]
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
         sigma2[j] = max(10^(-6),
-                    exp(alpha + beta * log(mean_application[j]) + omega[j]))
+                    exp(alpha + beta * log(mean_proposal[j]) + omega[j]))
         inv_sigma2[j] = 1/sigma2[j]
         omega[j] ~ dnorm(0, inv_tau_omega2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
 
@@ -232,10 +248,10 @@ get_default_jags_model <- function(outcome_variable = "continuous",
       c[1:5] <- sort(cc)
 
       inv_tau_omega2 <- pow(tau_omega, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_application ~ dunif(10^(-6), 2)
-      tau_voter ~ dunif(10^(-6), 2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
       tau_omega ~ dunif(10^(-6), 10)
 
       alpha ~ dnorm(0, 0.01) #T(0.001, 1)
@@ -244,112 +260,112 @@ get_default_jags_model <- function(outcome_variable = "continuous",
   }
 
   if (outcome_variable == "continuous" & !nine_point_scale_continuous &
-      residuals == "homogeneous" & subsections){
+      residuals == "homogeneous" & subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dnorm(mu[i], inv_sigma2)
                 # inv_sigma2 is precision (1 / variance)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-                   voter_intercept[num_application[i], num_voter[i]] +
-                   section_intercept[num_section[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+                   assessor_intercept[num_proposal[i], num_assessor[i]] +
+                   panel_intercept[num_panel[i]]
       }
       # Ranks: (for the expected ranks)
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
-      for (l in 1:n_section){
-        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
       }
 
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      inv_tau_section2 <- pow(tau_section, -2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
       sigma ~ dunif(10^(-6), 2)
-      tau_application ~ dunif(10^(-6), 2)
-      tau_voter ~ dunif(10^(-6), 2)
-      tau_section ~ dunif(10^(-6), 2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
+      tau_panel ~ dunif(10^(-6), 2)
       }",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "continuous" & nine_point_scale_continuous &
-      residuals == "homogeneous" & subsections){
+      residuals == "homogeneous" & subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dnorm(mu[i], inv_sigma2)
                 # inv_sigma2 is precision (1 / variance)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-                   voter_intercept[num_application[i], num_voter[i]] +
-                   section_intercept[num_section[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+                   assessor_intercept[num_proposal[i], num_assessor[i]] +
+                   panel_intercept[num_panel[i]]
       }
       # Ranks: (for the expected ranks)
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 1) # 1/(1^2) = 1
       }
-      for (l in 1:n_section){
-        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
       }
 
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      inv_tau_section2 <- pow(tau_section, -2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
       sigma ~ dunif(10^(-6), 3)
-      tau_application ~ dunif(10^(-6), 3)
-      tau_voter ~ dunif(10^(-6), 3)
-      tau_section ~ dunif(10^(-6), 3)
+      tau_proposal ~ dunif(10^(-6), 3)
+      tau_assessor ~ dunif(10^(-6), 3)
+      tau_panel ~ dunif(10^(-6), 3)
       }",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "homogeneous" &
-      subsections){
+      subpanels){
     cat("model{
       # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dinterval(latent_trait[i], c[])
           latent_trait[i] ~ dnorm(mu[i], inv_sigma2)
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-            voter_intercept[num_application[i], num_voter[i]] +
-                   section_intercept[num_section[i]]
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+            assessor_intercept[num_proposal[i], num_assessor[i]] +
+                   panel_intercept[num_panel[i]]
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
-      for (l in 1:n_section){
-        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
       }
 
       for (k in 1:5){
@@ -359,55 +375,55 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 
       sigma ~ dunif(0.000001, 2)
       inv_sigma2 <- pow(sigma, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      tau_application ~ dunif(0.000001, 2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_voter ~ dunif(0.000001, 2)
-      inv_tau_section2 <- pow(tau_section, -2)
-      tau_section ~ dunif(0.000001, 2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      tau_proposal ~ dunif(0.000001, 2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_assessor ~ dunif(0.000001, 2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
+      tau_panel ~ dunif(0.000001, 2)
     }", file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "continuous" & !nine_point_scale_continuous &
-      residuals == "heterogeneous" & subsections){
+      residuals == "heterogeneous" & subpanels){
     cat("model{
      # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
-      grade[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
+      for (i in 1:n) { # i is not the proposal but the review
+      grade[i] ~ dnorm(mu[i], inv_sigma2[num_proposal[i]])
       # inv_sigma2 is precision (1 / variance)
-      mu[i] <- overall_mean + application_intercept[num_application[i]] +
-               voter_intercept[num_application[i], num_voter[i]]+
-               section_intercept[num_section[i]]
+      mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+               assessor_intercept[num_proposal[i], num_assessor[i]]+
+               panel_intercept[num_panel[i]]
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
         sigma2[j] = max(10^(-6),
-                    exp(alpha + beta * log(mean_application[j]) + omega[j]))
+                    exp(alpha + beta * log(mean_proposal[j]) + omega[j]))
         inv_sigma2[j] = 1/sigma2[j]
         omega[j] ~ dnorm(0, inv_tau_omega2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
-      for (l in 1:n_section){
-        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
       }
 
-      inv_tau_application2 <- pow(tau_application, -2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
       inv_tau_omega2 <- pow(tau_omega, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      tau_application ~ dunif(10^(-6), 2)
-      tau_voter ~ dunif(10^(-6), 2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
       tau_omega ~ dunif(10^(-6), 10)
-      inv_tau_section2 <- pow(tau_section, -2)
-      tau_section ~ dunif(0.000001, 2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
+      tau_panel ~ dunif(0.000001, 2)
 
       alpha ~ dnorm(0, 0.01) #T(0.001, 1)
       beta ~ dnorm(0, 0.01) #T(0.001, 1)
@@ -415,36 +431,36 @@ get_default_jags_model <- function(outcome_variable = "continuous",
         file = paste0(getwd(), "/", path))
   }
   if (outcome_variable == "ordinal" & residuals == "heterogeneous" &
-      subsections){
+      subpanels){
     cat("model{
           # Likelihood:
-      for (i in 1:n) { # i is not the application but the review
+      for (i in 1:n) { # i is not the proposal but the review
           grade[i] ~ dinterval(latent_trait[i], c[])
-          latent_trait[i] ~ dnorm(mu[i], inv_sigma2[num_application[i]])
-          mu[i] <- overall_mean + application_intercept[num_application[i]] +
-                   voter_intercept[num_application[i], num_voter[i]] +
-                   section_intercept[num_section[i]]
+          latent_trait[i] ~ dnorm(mu[i], inv_sigma2[num_proposal[i]])
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+                   assessor_intercept[num_proposal[i], num_assessor[i]] +
+                   panel_intercept[num_panel[i]]
       }
       # Ranks:
-      rank_theta[1:n_application] <- rank(-application_intercept[])
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
       # Priors:
-      for (j in 1:n_application){
-        application_intercept[j] ~ dnorm(0, inv_tau_application2)
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
         sigma2[j] = max(10^(-6),
-                    exp(alpha + beta * log(mean_application[j]) + omega[j]))
+                    exp(alpha + beta * log(mean_proposal[j]) + omega[j]))
         inv_sigma2[j] = 1/sigma2[j]
         omega[j] ~ dnorm(0, inv_tau_omega2)
       }
-      for (l in 1:n_voter){
-        for(j in 1:n_application){
-          voter_intercept[j, l] ~ dnorm(nu[l], inv_tau_voter2)
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
         }
       }
-      for (l in 1:n_voter){
+      for (l in 1:n_assessor){
         nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
       }
-      for (l in 1:n_section){
-        section_intercept[l] ~ dnorm(0, inv_tau_section2)
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
       }
 
 
@@ -454,13 +470,13 @@ get_default_jags_model <- function(outcome_variable = "continuous",
       c[1:5] <- sort(cc)
 
       inv_tau_omega2 <- pow(tau_omega, -2)
-      inv_tau_application2 <- pow(tau_application, -2)
-      inv_tau_voter2 <- pow(tau_voter, -2)
-      inv_tau_section2 <- pow(tau_section, -2)
-      tau_application ~ dunif(10^(-6), 2)
-      tau_voter ~ dunif(10^(-6), 2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
       tau_omega ~ dunif(10^(-6), 10)
-      tau_section ~ dunif(10^(-6), 2)
+      tau_panel ~ dunif(10^(-6), 2)
 
       alpha ~ dnorm(0, 0.01) #T(0.001, 1)
       beta ~ dnorm(0, 0.01) #T(0.001, 1)
@@ -476,8 +492,9 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' convergence of the chains and extends them until convergence is achieved.
 #' Find more in Details.
 #'
-#' @param data long data frame with all needed variables as specified in the
-#' JAGS model defined in the text file with path given in `path_to_jags_model`.
+#' @param data data frame, in long format, with all needed variables as
+#' specified in the JAGS model defined in the text file with path given in
+#' `path_to_jags_model`.
 #' @param path_to_jags_model the path to text file including the JAGS model
 #' definition. By default `= NULL`, and the function will use a default model as
 #' implemented in the package; in `get_default_jags_model()`.
@@ -514,7 +531,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' @param theta_name the name of the proposal intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `proposal_intercept`.
-#' @param tau_name_proposal_proposal the name of tau in the JAGS model, being the
+#' @param tau_name_proposal the name of tau in the JAGS model, being the
 #' standard error of the proposal effects. The default that also goes with the
 #' default JAGS model build in the package is `tau_proposal`.
 #' @param tau_name_assessor name of the standard error of the assessor effect in
@@ -526,7 +543,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
-#' @param tau_panel_name the name of the standard error of the panel effect, if
+#' @param tau_name_panel the name of the standard error of the panel effect, if
 #' needed. The default that also goes with the default JAGS model build in the
 #' package is `tau_panel`. This is only needed if a ranking has to be
 #' established combining or merging all panels, and therefore only important if
@@ -609,8 +626,8 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #'      filter(panel == "p1")
 #' \dontrun{
 #' mcmc_samples <- get_mcmc_samples(data = data_panel1,
-#'                                  id_proposal = "application",
-#'                                  id_assessor = "voter",
+#'                                  id_proposal = "proposal",
+#'                                  id_assessor = "assessor",
 #'                                  grade_variable = "num_grade")
 #'                                  }
 get_mcmc_samples <- function(data, id_proposal, id_assessor,
@@ -660,7 +677,7 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
                                                      "ordinal", "continuous"),
                            residuals = ifelse(heterogeneous_residuals,
                                               "heterogeneous", "homogeneous"),
-                           subsections = !is.null(id_panel))
+                           subpanels = !is.null(id_panel))
     path_to_jags_model <- paste0(getwd(), "/", "default_jags_model.txt")
     if (!quiet)
       print("Default model is used (check get_default_jags_model function!).")
@@ -691,29 +708,29 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
   ## Prepare data for jags:
   #########################
 
-  # We need to add integer/count-like numeric ids for the application and the
-  # voters in the data for the computation of the JAGS model:
-  num_application <- data %>%
+  # We need to add integer/count-like numeric ids for the proposals and the
+  # assessors in the data for the computation of the JAGS model:
+  num_proposal <- data %>%
     select(id_proposal) %>%
     distinct() %>%
-    mutate(num_application = seq_len(n()))
-  num_voter <- data %>%
+    mutate(num_proposal = seq_len(n()))
+  num_assessor <- data %>%
     select(id_assessor) %>%
     distinct() %>%
-    mutate(num_voter = seq_len(n()))
+    mutate(num_assessor = seq_len(n()))
   if (!is.null(id_panel)) {
-    num_section <- data %>%
+    num_panel <- data %>%
       select(id_panel) %>%
       distinct() %>%
-      mutate(num_section = seq_len(n()))
+      mutate(num_panel = seq_len(n()))
   }
   # Pasting everything together
   data <- data %>%
-    left_join(num_application, by = id_proposal) %>%
-    left_join(num_voter, by = id_assessor)
+    left_join(num_proposal, by = id_proposal) %>%
+    left_join(num_assessor, by = id_assessor)
   if (!is.null(id_panel)) {
     data <- data %>%
-      left_join(num_section, by = id_panel)
+      left_join(num_panel, by = id_panel)
   }
 
   # Deleting potential NAs:
@@ -727,14 +744,14 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
     # the level of the ordinal scale to start at 0, not at 1.
     num_outcome <- data %>% dplyr::pull(get(grade_variable)) - 1
     overall_mean <- data %>%
-      group_by(num_application) %>%
+      group_by(num_proposal) %>%
       summarise(av = mean(get(grade_variable) - 1, na.rm = TRUE)) %>%
       dplyr::pull(.data$av) %>%
       mean()
   } else {
     num_outcome <- data %>% dplyr::pull(get(grade_variable))
     overall_mean <- data %>%
-      group_by(num_application) %>%
+      group_by(num_proposal) %>%
       summarise(av = mean(get(grade_variable), na.rm = TRUE)) %>%
       dplyr::pull(.data$av) %>%
       mean()
@@ -743,21 +760,21 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
   # The list with the data:
   data_for_jags <-
     list(n = nrow(data),
-         n_application = length(unique(data$num_application)),
-         n_voter = length(unique(data$num_voter)),
+         n_proposal = length(unique(data$num_proposal)),
+         n_assessor = length(unique(data$num_assessor)),
          grade = num_outcome,
          overall_mean = overall_mean,
-         num_application = data$num_application,
-         num_voter = data$num_voter)
+         num_proposal = data$num_proposal,
+         num_assessor = data$num_assessor)
   if (!is.null(id_panel)) { # if we have a section effect
     data_for_jags <- c(data_for_jags,
-                       list(n_section = length(unique(data$num_section)),
-                            num_section = data$num_section))
+                       list(n_panel = length(unique(data$num_panel)),
+                            num_panel = data$num_panel))
   }
   if (heterogeneous_residuals){ # if the residuals are supposed to be heteroge.
     data_for_jags <- c(data_for_jags,
-                       list(mean_application = data %>%
-                              group_by(num_application) %>%
+                       list(mean_proposal = data %>%
+                              group_by(num_proposal) %>%
                               summarise(av = mean(get(grade_variable),
                                                   na.rm = TRUE)) %>%
                               dplyr::pull(.data$av)))
@@ -766,8 +783,8 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
   # Sample certain _variables_ from the model, depending on whether or not they
   # are specified.
   if (is.null(names_variables_to_sample)) {
-    variables <- c(theta_name, tau_name_proposal, tau_name_assessor, rank_theta_name,
-                   assessor_name)
+    variables <- c(theta_name, tau_name_proposal, tau_name_assessor,
+                   rank_theta_name, assessor_name)
     if (!heterogeneous_residuals){
       variables <- c(variables, sigma_name)
     }
@@ -801,13 +818,13 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
       lapply(seq_len(n_chains),
              function(x)
                list(proposal_intercept =
-                      runif(data_for_jags$n_application, -2, 2),
+                      runif(data_for_jags$n_proposal, -2, 2),
                     assessor_intercept =
-                      matrix(runif(data_for_jags$n_voter*
-                                     data_for_jags$n_application, -2, 2),
-                             ncol = data_for_jags$n_voter,
-                             nrow = data_for_jags$n_application),
-                    nu = runif(data_for_jags$n_voter, -2, 2),
+                      matrix(runif(data_for_jags$n_assessor*
+                                     data_for_jags$n_proposal, -2, 2),
+                             ncol = data_for_jags$n_assessor,
+                             nrow = data_for_jags$n_proposal),
+                    nu = runif(data_for_jags$n_assessor, -2, 2),
                     sigma = runif(1, 10^(-6), 2),
                     tau_proposal = runif(1, 10^(-6), 2),
                     tau_assessor = runif(1, 10^(-6), 2),
@@ -827,8 +844,8 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
       inits <- lapply(inits,
                       function(I)
                         c(I, list(tau_panel = runif(1, 10^(-6), 2),
-                                  section_intercept =
-                                    runif(data_for_jags$n_section, -2, 2))))
+                                  panel_intercept =
+                                    runif(data_for_jags$n_panel, -2, 2))))
     }
     if (heterogeneous_residuals) {
       # Then we do not want a starting value for sigma
@@ -845,13 +862,13 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
     # If overdispersed starting values are used:
     inits <-
       get_inits_overdispersed_four_chains(
-        merging_sections = !is.null(id_panel),
+        merging_panels = !is.null(id_panel),
         ordinal_scale = ordinal_scale,
         point_scale = point_scale,
         heterogeneous_residuals = heterogeneous_residuals,
-        n_applications = data_for_jags$n_application,
-        n_voters = data_for_jags$n_voter,
-        n_sections = data_for_jags$n_section,
+        n_proposals = data_for_jags$n_proposal,
+        n_assessors = data_for_jags$n_assessor,
+        n_panels = data_for_jags$n_panel,
         grades = data_for_jags$grade,
         seed = seed)
   }

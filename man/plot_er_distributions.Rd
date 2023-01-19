@@ -96,8 +96,8 @@ data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
 \dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
-                                 id_application = "application",
-                                 id_voter = "voter",
+                                 id_proposal = "application",
+                                 id_assessor = "voter",
                                  grade_variable = "num_grade")
 plot_er_distributions(mcmc_samples,
                       n_proposals = data_panel1 \%>\%
