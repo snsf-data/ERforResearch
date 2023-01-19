@@ -6,28 +6,28 @@
 \usage{
 get_right_data_format(
   individual_votes,
-  prefix_voter = NULL,
+  prefix_assessor = NULL,
   fun_grade_to_num = get_num_grade_snsf,
   delete_NA = TRUE,
-  first_voter = NULL,
-  last_voter = NULL
+  first_assessor = NULL,
+  last_assessor = NULL
 )
 }
 \arguments{
 \item{individual_votes}{The matrix containing the individual votes.}
 
-\item{prefix_voter}{The column name prefix used to indicate the voters.}
+\item{prefix_assessor}{The column name prefix used to indicate the assessors.}
 
 \item{fun_grade_to_num}{function that translates grades to numeric values}
 
 \item{delete_NA}{should the missing (numeric) grades be deleted?
 (default = TRUE)}
 
-\item{first_voter}{The column name of the first voter in the matrix (not
-needed if prefix_voter is not null).}
+\item{first_assessor}{The column name of the first assessor in the matrix (not
+needed if prefix_assessor is not null).}
 
-\item{last_voter}{The column name of the last voter in the matrix (not
-needed if prefix_voter is not null).}
+\item{last_assessor}{The column name of the last assessor in the matrix (not
+needed if prefix_assessor is not null).}
 }
 \description{
 This function transforms the default csv file with the individual votes into

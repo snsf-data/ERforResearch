@@ -2,7 +2,7 @@
 % Please edit documentation in R/plotting_functions.R
 \name{assessor_behavior_distribution}
 \alias{assessor_behavior_distribution}
-\title{Voter behavior distributions}
+\title{Assessor behavior distributions}
 \usage{
 assessor_behavior_distribution(
   get_mcmc_samples_result,
