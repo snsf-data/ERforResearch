@@ -527,7 +527,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' In the other scenario, a ranking would be established combining or merging
 #' all panels.
 #' @param grade_variable the name of the variable in `data` with the outcome
-#' variable, \textit{i.e.} the grade or score.
+#' variable, i.e. the grade or score.
 #' @param theta_name the name of the proposal intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `proposal_intercept`.
@@ -569,7 +569,7 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' @param dont_bind setting this parameter to `TRUE` will pool all the chains
 #' together before returning the MCMC. By default it is however set to `FALSE`.
 #' @param inits_type the type of the initial values. By default the initial
-#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' values are randomly selected, i.e. `inits_type = "random"`.
 #' Alternatively, if four chains are used, the initial values can also be
 #' `"overdispersed"`.
 #' @param names_variables_to_sample the variables to sample can be specified,
@@ -587,8 +587,9 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #'
 #' @import runjags
 #' @import coda
-#' @import dplyr
+#' @importFrom dplyr pull select distinct mutate group_by summarise left_join filter n
 #' @importFrom stats rnorm runif
+#' @importFrom magrittr %>%
 #'
 #' @return The function returns a list with: the MCMC samples in `samples` for
 #' all parameters defined in the model, more information on the number of
@@ -884,10 +885,10 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
   # Extend the jags model if needed
   counter <- 1
   while (any(summary(samps1)[, "psrf"] > rhat_threshold) &
-         counter * n_iter <= max_iter){
+         (counter + 1) * n_iter <= max_iter){
     print(paste0("Extension JAGS samples number ", counter, "."))
-    samps1 <- extend.jags(samps1,  sample = n_iter, method = runjags_method)
     counter <- counter + 1
+    samps1 <- extend.jags(samps1, sample = n_iter, method = runjags_method)
   }
 
   if (dont_bind) {

@@ -10,9 +10,8 @@ Authors@R:
 Description: This package implements the functionality to use the expected ranks (ER) in the context of research evaluation as presented in a recent preprint (https://arxiv.org/abs/2102.09958). For a demonstration of the major functions check out the vignette (Demo ERforResearch).
 Encoding: UTF-8
 Imports: bayesplot, ggridges, stringr, ggrepel, coda,
-    bookdown,
-    here, ggalluvial, scales, forcats
-Depends: rjags, dplyr, tidyr, ggplot2
+    magrittr, tibble
+Depends: runjags, dplyr, tidyr, ggplot2
 VignetteBuilder: knitr
 LazyData: true
 RoxygenNote: 7.1.2
@@ -21,6 +20,7 @@ Suggests:
     devtools,
     git2r,
     tidyverse,
+    bookdown,
     rmarkdown, knitr
 Config/testthat/edition: 3
 License: MIT + file LICENSE

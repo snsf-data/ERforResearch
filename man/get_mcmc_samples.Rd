@@ -49,7 +49,7 @@ of the assessor. The default `= NULL`, for the case where each assessor only
 evaluates/grades one proposal.}
 
 \item{grade_variable}{the name of the variable in `data` with the outcome
-variable, \textit{i.e.} the grade or score.}
+variable, i.e. the grade or score.}
 
 \item{path_to_jags_model}{the path to text file including the JAGS model
 definition. By default `= NULL`, and the function will use a default model as
@@ -138,7 +138,7 @@ if `quiet = TRUE`, the warning is not shown.}
 together before returning the MCMC. By default it is however set to `FALSE`.}
 
 \item{inits_type}{the type of the initial values. By default the initial
-values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+values are randomly selected, i.e. `inits_type = "random"`.
 Alternatively, if four chains are used, the initial values can also be
 `"overdispersed"`.}
 

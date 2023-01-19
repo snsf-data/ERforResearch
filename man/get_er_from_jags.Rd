@@ -19,8 +19,8 @@ get_er_from_jags(
   theta_name = "proposal_intercept",
   assessor_name = "assessor_intercept",
   tau_name_proposal = "tau_proposal",
-  tau_assessor_name = "tau_assessor",
-  tau_panel_name = NULL,
+  tau_name_assessor = "tau_assessor",
+  tau_name_panel = NULL,
   sigma_name = "sigma",
   rank_theta_name = "rank_theta",
   rank_pm = TRUE,
@@ -50,7 +50,7 @@ of the assessor. The default `= NULL`, for the case where each assessor only
 evaluates/grades one proposal.}
 
 \item{grade_variable}{the name of the variable in `data` with the outcome
-variable, \textit{i.e.} the grade or score.}
+variable, i.e. the grade or score.}
 
 \item{path_to_jags_model}{the path to text file including the JAGS model
 definition. By default `= NULL`, and the function will use a default model as
@@ -97,6 +97,16 @@ is `assessor_intercept`.}
 standard error of the proposal effects. The default that also goes with the
 default JAGS model build in the package is `tau_proposal`.}
 
+\item{tau_name_assessor}{name of the standard error of the assessor effect in
+the JAGS model.  The default that also goes with the default JAGS model build
+in the package is `tau_assessor`.}
+
+\item{tau_name_panel}{the name of the standard error of the panel effect, if
+needed. The default that also goes with the default JAGS model build in the
+package is `tau_panel`. This is only needed if a ranking has to be
+established combining or merging all panels, and therefore only important if
+`id_panel` is not `NULL`.}
+
 \item{sigma_name}{name of the standard deviation of the full model. The
 default that also goes with the default JAGS model build in the package is
 `sigma`.}
@@ -104,6 +114,9 @@ default that also goes with the default JAGS model build in the package is
 \item{rank_theta_name}{the name of the rank of theta in the JAGS model. The
 default that also goes with the default JAGS model build in the package is
 `rank_theta`.}
+
+\item{rank_pm}{should the rank based on the posterior mean by computed and
+presented in the Figure? By default this parameter is set to `TRUE`.}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
 outcome is on an ordinal scale. By default, we assume a numeric scale and
@@ -121,11 +134,11 @@ numeric scale and do not need this information and the  parameter is set to
 \item{mcmc_samples}{if the mcmc sample has already been run. This should be
 the direct output from the `get_mcmc_samples()`. By default, it is set to
 `NULL` and the sampler will be run. If mcmc samples are provided here, all
-further sampling information below, \textit{e.g} number of chains and
+further sampling information below, e.g. number of chains and
 iterations will be disgarded.}
 
 \item{inits_type}{the type of the initial values. By default the initial
-values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+values are randomly selected, i.e. `inits_type = "random"`.
 Alternatively, if four chains are used, the initial values can also be
 `"overdispersed"`.}
 
@@ -150,19 +163,6 @@ this functions threshold is set to `1.01` by default.}
 
 \item{runjags_method}{the method with which to call JAGS (from
 `runjags::run.jags()` with the default being set to `parallel`).}
-
-\item{tau_name_assessor}{name of the standard error of the assessor effect in
-the JAGS model.  The default that also goes with the default JAGS model build
-in the package is `tau_assessor`.}
-
-\item{tau_name_panel}{the name of the standard error of the panel effect, if
-needed. The default that also goes with the default JAGS model build in the
-package is `tau_panel`. This is only needed if a ranking has to be
-established combining or merging all panels, and therefore only important if
-`id_panel` is not `NULL`.}
-
-\item{variables_to_sample}{should the default variables be samples, or will
-they be "specified" (in names_variables_to_sample), default is "default".}
 }
 \value{
 the result is a list with the

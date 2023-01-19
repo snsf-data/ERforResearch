@@ -19,7 +19,7 @@
 #' @param mcmc_samples if the mcmc sample has already been run. This should be
 #' the direct output from the `get_mcmc_samples()`. By default, it is set to
 #' `NULL` and the sampler will be run. If mcmc samples are provided here, all
-#' further sampling information below, \textit{e.g} number of chains and
+#' further sampling information below, e.g. number of chains and
 #' iterations will be disgarded.
 #' @param n_chains the number of chains for the JAGS sampler. The default number
 #' of chains is set to four. This creates optimal conditions and should not be
@@ -47,7 +47,7 @@
 #' In the other scenario, a ranking would be established combining or merging
 #' all panels.
 #' @param grade_variable the name of the variable in `data` with the outcome
-#' variable, \textit{i.e.} the grade or score.
+#' variable, i.e. the grade or score.
 #' @param theta_name the name of the proposal intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `proposal_intercept`.
@@ -60,6 +60,8 @@
 #' @param rank_theta_name the name of the rank of theta in the JAGS model. The
 #' default that also goes with the default JAGS model build in the package is
 #' `rank_theta`.
+#' @param rank_pm should the rank based on the posterior mean by computed and
+#' presented in the Figure? By default this parameter is set to `TRUE`.
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
@@ -82,15 +84,13 @@
 #' the residuals should be heterogeneous. By default the residuals are assumed
 #' homogeneous and this parameter is set to `FALSE`.
 #' @param inits_type the type of the initial values. By default the initial
-#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' values are randomly selected, i.e. `inits_type = "random"`.
 #' Alternatively, if four chains are used, the initial values can also be
 #' `"overdispersed"`.
 #' @param initial_values The list of initial values for the jags sampler can be
 #' provided directly. Otherwise `get_inits_overdispersed_four_chains` for the
 #' overdispersed version is used, or they are randomly selected. Always using a
 #' seed to ensure computational reproducibility.
-#' @param variables_to_sample should the default variables be samples, or will
-#' they be "specified" (in names_variables_to_sample), default is "default".
 #' @param names_variables_to_sample if variables to sample are specified, write
 #' their names here, as a character-vector, default is NULL.
 #' @param seed the seed for the JAGS model (default = `1991`). This seed will
@@ -105,7 +105,7 @@
 #' `runjags::run.jags()` with the default being set to `parallel`).
 #'
 #' @import runjags
-#' @import dplyr
+#' @importFrom tibble tibble
 #' @return the result is a list with the
 #'
 #' 1) a table with the ranked proposals:
@@ -153,8 +153,8 @@ get_er_from_jags <-  function(data, id_proposal,
                               theta_name = "proposal_intercept",
                               assessor_name = "assessor_intercept",
                               tau_name_proposal = "tau_proposal",
-                              tau_assessor_name = "tau_assessor",
-                              tau_panel_name = NULL,
+                              tau_name_assessor = "tau_assessor",
+                              tau_name_panel = NULL,
                               sigma_name = "sigma",
                               rank_theta_name = "rank_theta",
                               rank_pm = TRUE,
@@ -226,8 +226,8 @@ get_er_from_jags <-  function(data, id_proposal,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
                                      tau_name_proposal = tau_name_proposal,
-                                     tau_assessor_name = tau_assessor_name,
-                                     tau_panel_name = tau_panel_name,
+                                     tau_name_assessor = tau_name_assessor,
+                                     tau_name_panel = tau_name_panel,
                                      sigma_name = sigma_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
@@ -332,6 +332,11 @@ get_er_from_jags <-  function(data, id_proposal,
 #' @param path_to_jags_model the path to text file including the JAGS model
 #' definition. By default `= NULL`, and the function will use a default model as
 #' implemented in the package; in `get_default_jags_model()`.
+#' @param mcmc_samples if the mcmc sample has already been run. This should be
+#' the direct output from the `get_mcmc_samples()`. By default, it is set to
+#' `NULL` and the sampler will be run. If mcmc samples are provided here, all
+#' further sampling information below, e.g. number of chains and
+#' iterations will be disgarded.
 #' @param n_iter how many iterations should be used in the JAGS sampler? This is
 #' the same as `sample` in the `runjags::run.jags()` function. It is set to
 #' `10000` by default.
@@ -361,7 +366,7 @@ get_er_from_jags <-  function(data, id_proposal,
 #' In the other scenario, a ranking would be established combining or merging
 #' all panels.
 #' @param grade_variable the name of the variable in `data` with the outcome
-#' variable, \textit{i.e.} the grade or score.
+#' variable, i.e. the grade or score.
 #' @param theta_name the name of the proposal intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `proposal_intercept`.
@@ -403,7 +408,7 @@ get_er_from_jags <-  function(data, id_proposal,
 #' @param dont_bind setting this parameter to `TRUE` will pool all the chains
 #' together before returning the MCMC. By default it is however set to `FALSE`.
 #' @param inits_type the type of the initial values. By default the initial
-#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' values are randomly selected, i.e. `inits_type = "random"`.
 #' Alternatively, if four chains are used, the initial values can also be
 #' `"overdispersed"`.
 #' @param names_variables_to_sample the variables to sample can be specified,
@@ -436,6 +441,7 @@ get_er_from_jags <-  function(data, id_proposal,
 get_sucra <- function(data, id_proposal, id_assessor,
                       grade_variable,
                       path_to_jags_model = NULL,
+                      mcmc_samples = NULL,
                       n_chains = 4, n_iter = 10000,
                       n_burnin = 4000, n_adapt = 1000,
                       id_panel = NULL, max_iter = 1000000,
@@ -504,8 +510,8 @@ get_sucra <- function(data, id_proposal, id_assessor,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
                                      tau_name_proposal = tau_name_proposal,
-                                     tau_assessor_name = tau_assessor_name,
-                                     tau_panel_name = tau_panel_name,
+                                     tau_name_assessor = tau_name_assessor,
+                                     tau_name_panel = tau_name_panel,
                                      sigma_name = sigma_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,

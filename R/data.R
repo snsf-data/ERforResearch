@@ -5,7 +5,8 @@
 #' @details  A = 6, AB = 5, B = 4, BC = 3, C = 2, D = 1. All other grades (COI,
 #' etc) are transformed to NA.
 #' @export
-#' @import stringr
+#' @importFrom stringr str_trim
+#' @importFrom dplyr case_when
 get_num_grade_snsf <- function(grade) {
   grade <- str_trim(grade)
   return(
@@ -31,7 +32,9 @@ get_num_grade_snsf <- function(grade) {
 #' needed if prefix_assessor is not null).
 #' @param last_assessor The column name of the last assessor in the matrix (not
 #' needed if prefix_assessor is not null).
-#' @import stringr
+#'
+#' @importFrom stringr str_to_upper
+#' @importFrom tidyr pivot_longer starts_with
 #' @export
 get_right_data_format <- function(individual_votes, prefix_assessor = NULL,
                                   fun_grade_to_num = get_num_grade_snsf,
@@ -95,6 +98,7 @@ get_right_data_format <- function(individual_votes, prefix_assessor = NULL,
 #' This function loads and returns mock data
 #' @param panels default to 'all', for three panels. other possibilities:
 #' 'one', 'two', and 'three'.
+#' @importFrom dplyr bind_rows
 #' @export
 get_mock_data <- function(panels = "all"){
   panel1 <- tibble(proposal = rep(paste0("#", 1:15), each = 5),

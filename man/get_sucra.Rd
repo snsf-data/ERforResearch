@@ -10,6 +10,7 @@ get_sucra(
   id_assessor,
   grade_variable,
   path_to_jags_model = NULL,
+  mcmc_samples = NULL,
   n_chains = 4,
   n_iter = 10000,
   n_burnin = 4000,
@@ -49,11 +50,17 @@ of the assessor. The default `= NULL`, for the case where each assessor only
 evaluates/grades one proposal.}
 
 \item{grade_variable}{the name of the variable in `data` with the outcome
-variable, \textit{i.e.} the grade or score.}
+variable, i.e. the grade or score.}
 
 \item{path_to_jags_model}{the path to text file including the JAGS model
 definition. By default `= NULL`, and the function will use a default model as
 implemented in the package; in `get_default_jags_model()`.}
+
+\item{mcmc_samples}{if the mcmc sample has already been run. This should be
+the direct output from the `get_mcmc_samples()`. By default, it is set to
+`NULL` and the sampler will be run. If mcmc samples are provided here, all
+further sampling information below, e.g. number of chains and
+iterations will be disgarded.}
 
 \item{n_chains}{the number of chains for the JAGS sampler. The default number
 of chains is set to four. This creates optimal conditions and should not be
@@ -138,7 +145,7 @@ if `quiet = TRUE`, the warning is not shown.}
 together before returning the MCMC. By default it is however set to `FALSE`.}
 
 \item{inits_type}{the type of the initial values. By default the initial
-values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+values are randomly selected, i.e. `inits_type = "random"`.
 Alternatively, if four chains are used, the initial values can also be
 `"overdispersed"`.}
 

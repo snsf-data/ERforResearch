@@ -42,10 +42,13 @@
 #' @param segment_ncp ...
 #' @param segment_size ...
 #' @param hjust_y_axis ...
+#'
 #' @return the result is a plot
-#' @import ggrepel
-#' @import tidyr
+#'
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom tidyr gather
 #' @import ggplot2
+#'
 #' @examples
 #' dat <- get_mock_data() %>%
 #' filter(panel == "p1")
@@ -240,7 +243,7 @@ plotting_er_results <- function(er_results,
 #' In the other scenario, a ranking would be established combining or merging
 #' all panels.
 #' @param grade_variable the name of the variable in `data` with the outcome
-#' variable, \textit{i.e.} the grade or score.
+#' variable, i.e. the grade or score.
 #' @param theta_name the name of the proposal intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `proposal_intercept`.
@@ -282,7 +285,7 @@ plotting_er_results <- function(er_results,
 #' @param dont_bind setting this parameter to `TRUE` will pool all the chains
 #' together before returning the MCMC. By default it is however set to `FALSE`.
 #' @param inits_type the type of the initial values. By default the initial
-#' values are randomly selected, \textit{i.e.} `inits_type = "random"`.
+#' values are randomly selected, i.e. `inits_type = "random"`.
 #' Alternatively, if four chains are used, the initial values can also be
 #' `"overdispersed"`.
 #' @param names_variables_to_sample the variables to sample can be specified,
@@ -299,7 +302,8 @@ plotting_er_results <- function(er_results,
 #' `runjags::run.jags()` with the default being set to `parallel`).
 #'
 #' @import runjags
-#' @import dplyr
+#' @importFrom tidyr gather
+#' @importFrom dplyr as_tibble rename
 #' @importFrom utils head
 #'
 #' @return the result is a plot of the rankogram (or cumulative ranking
@@ -359,8 +363,8 @@ plot_rankogram <- function(data,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
                                      tau_name_proposal = tau_name_proposal,
-                                     tau_assessor_name = tau_assessor_name,
-                                     tau_panel_name = tau_panel_name,
+                                     tau_name_assessor = tau_name_assessor,
+                                     tau_name_panel = tau_name_panel,
                                      sigma_name = sigma_name,
                                      ordinal_scale = ordinal_scale,
                                      point_scale = point_scale,
@@ -466,7 +470,8 @@ plot_rankogram <- function(data,
 #' @return the result is a plot of the posterior distributions of the average
 #' voter behaviors.
 #'
-#' @import ggridges
+#' @importFrom ggridges geom_density_ridges_gradient
+#' @importFrom dplyr ungroup
 #' @importFrom stats median
 #'
 #' @export
@@ -567,11 +572,12 @@ assessor_behavior_distribution <- function(get_mcmc_samples_result, n_assessors,
 #' @return the result is a plot of the expected rank together with their
 #' credible intervals
 #'
-#' @import bayesplot
+#' @importFrom bayesplot mcmc_intervals_data
+#' @importFrom dplyr arrange slice recode_factor
 #'
-#'@export
+#' @export
 #'
-#'@examples
+#' @examples
 #' data_panel1 <- get_mock_data() %>%
 #'      filter(panel == "p1")
 #' \dontrun{
@@ -768,105 +774,4 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
   plot
 }
 
-
-#' Sankey plot for funding groups
-#'
-#' @param get_mcmc_samples_result output from `get_mcmc_sample()`
-#' @param n_proposals number of proposals in the panel / call
-#' @param name_er_or_theta 	the name of the parameter estimating the ranks (or
-#' the proposal effect) in the Bayesian Hierarchical model
-#' (default = "rank_theta").
-#' @param er if TRUE then, the ER are plotted, otherwise the thetas (the
-#' proposal effects) are plotted. (default = TRUE)
-#' @param title title of the plot (default = NULL, no title).
-#' @param number_fundable number of proposals that can be funded.
-#' @param raw_data raw long data with individual votes and numeric grade
-#' @param num_grade_variable name of numeric grade in raw_data
-#' @param id_proposal name of proposal / applicant identifier
-#' @param colors vector with colors, default = color blind.
-#'
-#' @import ggalluvial
-#' @import scales
-#' @import forcats
-#'
-#' @return A plot (similar to Sankey plot)
-#' @export
-#'
-get_sankey_plot_br <- function(get_mcmc_samples_result, n_proposals,
-                               raw_data, num_grade_variable = "num_grade",
-                               id_proposal,
-                               name_er_or_theta = "rank_theta",
-                               er = TRUE, title = NULL,
-                               number_fundable = NULL, colors = NULL) {
-
-  # Colorblind palette
-  if (is.null(colors)) {
-    colors <- c("#E69F00", "#56B4E9", "#009E73")
-    names(colors) <- c("accepted", "rejected", "random selection")
-    }
-  # Get the correct data
-  data_for_plot <- plot_er_distributions(get_mcmc_samples_result,
-                                         n_proposals = n_proposals,
-                                         name_er_or_theta = name_er_or_theta,
-                                         names_proposals = NULL,
-                                         number_fundable = number_fundable,
-                                         proposal = "Proposal ")$data
-
-  t <- distinct(raw_data[, id_proposal])[[1]]
-  names(t) <- paste0("Proposal ", seq_len(n_proposals))
-  fu <- function(name) {
-    unique(names(t)[which(t == name)])
-  }
-
-  data_for_plot <- data_for_plot %>%
-    select(.data$parameter, .data$m, .data$rs) %>%
-    left_join(raw_data %>%
-                rename(id_proposal = id_proposal) %>%
-                group_by(id_proposal) %>%
-                mutate(id_proposal = fu(id_proposal)) %>%
-                summarise(avg = mean(.data$num_grade, na.rm = FALSE)) %>%
-                ungroup() %>%
-                arrange(-.data$avg) %>%
-                mutate(rs_avg = c(rep("accepted", number_fundable),
-                                  rep("rejected",
-                                      n_proposals - number_fundable)),
-                       # rs_avg = ifelse(id_proposal == "Proposal 15", "accepted", rs_avg),
-                       rank_avg = 1:n_proposals) %>%
-                select(-.data$avg),
-              by = c("parameter" = "id_proposal")) %>%
-    pivot_longer(c(.data$rs, .data$rs_avg),
-                 values_to = "group", names_to = "stage")
-
-  stratum_list <- data_for_plot %>%
-    mutate(stage = factor(stage, levels = c("rs_avg", "rs")),
-           group =
-             fct_rev(factor(.data$group, levels = c("accepted",
-                                                    "random selection",
-                                                    "rejected")))) %>%
-    count(stage, .data$group) %>%
-    mutate(strat = paste0(.data$group, " (", n, ")"))
-
-  data_for_plot %>%
-    mutate(stage = factor(stage, levels = c("rs_avg", "rs")),
-           group =
-             factor(.data$group, levels = c("accepted", "random selection",
-                                       "rejected"))) %>%
-    ggplot(aes(x = stage, stratum = .data$group,
-               alluvium = .data$parameter,
-               fill = .data$group)) +
-    geom_flow() +
-    geom_stratum(width = 1/3, fill = "white", color = "grey") +
-    geom_text(stat = "stratum", label = stratum_list$strat) +
-    scale_x_discrete(labels = c("Rank based on Average",
-                                "Bayesian Ranking"),
-                     expand = c(0.15, 0.15)) +
-    scale_fill_manual(values = colors) +
-    theme_minimal() +
-    theme(legend.position = "none",
-          panel.grid.major.y = element_blank(),
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.x = element_blank(),
-          axis.text.y = element_blank())  +
-    labs(title = NULL, x = NULL, y = NULL)
-}
 
