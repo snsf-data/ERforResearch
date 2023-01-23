@@ -1,0 +1,11 @@
+pandoc: 2.19.2
+pkgdown: 2.0.7
+pkgdown_sha: ~
+articles:
+  ERforResearch_vignette: ERforResearch_vignette.html
+  point_by_point_response: point_by_point_response.html
+last_built: 2023-01-23T14:50Z
+urls:
+  reference: https://snsf-data.github.io/ERforResearch/reference
+  article: https://snsf-data.github.io/ERforResearch/articles
+
