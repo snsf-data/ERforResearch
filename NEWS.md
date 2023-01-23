@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# ERforResearch 4.0.0
+
+- colored points in `plot_er_distribution()`.
+
+
 # ERforResearch 3.1.1.9000
 
 - added an option in the ER plotting function to allow for not having the PM, and skipping it in the plot
