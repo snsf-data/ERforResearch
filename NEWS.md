@@ -2,6 +2,9 @@
 
 # ERforResearch 4.0.0
 
+- (!!!) switch from `rjags` to `runjags` for `get_mcmc_samples()`.   
+- all function and documentations were updated due to the change to `runjags`.  
+- (!!!) important naming changes to align all package-communications: from `application` to `proposal`, `voter` to `assessor` and `section` to `panel`.  
 - colored points in `plot_er_distribution()`.
 
 
