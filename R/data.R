@@ -5,7 +5,8 @@
 #' @details  A = 6, AB = 5, B = 4, BC = 3, C = 2, D = 1. All other grades (COI,
 #' etc) are transformed to NA.
 #' @export
-#' @import stringr
+#' @importFrom stringr str_trim
+#' @importFrom dplyr case_when
 get_num_grade_snsf <- function(grade) {
   grade <- str_trim(grade)
   return(
@@ -23,41 +24,51 @@ get_num_grade_snsf <- function(grade) {
 #' This function transforms the default csv file with the individual votes into
 #' the correct long format
 #' @param individual_votes The matrix containing the individual votes.
-#' @param prefix_voter The column name prefix used to indicate the voters.
+#' @param prefix_assessor The column name prefix used to indicate the assessors.
 #' @param delete_NA should the missing (numeric) grades be deleted?
 #' (default = TRUE)
 #' @param fun_grade_to_num function that translates grades to numeric values
-#' @param first_voter The column name of the first voter in the matrix (not
-#' needed if prefix_voter is not null).
-#' @param last_voter The column name of the last voter in the matrix (not
-#' needed if prefix_voter is not null).
-#' @import stringr
+#' @param first_assessor The column name of the first assessor in the matrix (not
+#' needed if prefix_assessor is not null).
+#' @param last_assessor The column name of the last assessor in the matrix (not
+#' needed if prefix_assessor is not null).
+#'
+#' @importFrom stringr str_to_upper
+#' @importFrom tidyr pivot_longer starts_with
 #' @export
-get_right_data_format <- function(individual_votes, prefix_voter = NULL,
+get_right_data_format <- function(individual_votes, prefix_assessor = NULL,
                                   fun_grade_to_num = get_num_grade_snsf,
-                                  delete_NA = TRUE, first_voter = NULL,
-                                  last_voter = NULL) {
+                                  delete_NA = TRUE, first_assessor = NULL,
+                                  last_assessor = NULL) {
 
-  if (is.null(prefix_voter) & is.null(first_voter) & is.null(last_voter)){
-    stop(paste0("Please either give a prefix of the voter variables, e.g. ",
-                "voter if voter1:voter9, or the name of the first_voter ",
-                "and last_voter in the individivual votes matrix."))
+  if (is.null(prefix_assessor) & is.null(first_assessor) &
+      is.null(last_assessor)){
+    stop(paste0(
+      "Please either give a prefix of the assessor variables, e.g. assessor if",
+      " assessor1:assessor9, or the name of the first_assessor and ",
+      "last_assessor in the individivual votes matrix."))
   }
-  if (!is.null(prefix_voter) & !(is.null(first_voter) & is.null(last_voter))){
-    print(paste0("Note that only the parameter prefix_voter is used to define ",
-                 "the voter variables."))
+  if (!is.null(prefix_assessor) & !(is.null(first_assessor) &
+                                    is.null(last_assessor))){
+    print(paste0("Note that only the parameter prefix_assessor is used to ",
+                 "define the assessor variables."))
   }
-  if (is.null(prefix_voter) & !is.null(first_voter) & is.null(last_voter)){
-    stop(paste0("You need to specify the column name of the last_voter too."))
+  if (is.null(prefix_assessor) & !is.null(first_assessor) &
+      is.null(last_assessor)){
+    stop(paste0(
+      "You need to specify the column name of the last_assessor too."))
   }
-  if (is.null(prefix_voter) & is.null(first_voter) & !is.null(last_voter)){
-    stop(paste0("You need to specify the column name of the first_voter too."))
+  if (is.null(prefix_assessor) & is.null(first_assessor) &
+      !is.null(last_assessor)){
+    stop(paste0(
+      "You need to specify the column name of the first_assessor too."))
   }
 
-  if (is.null(prefix_voter)){
+  if (is.null(prefix_assessor)){
     long_data <- individual_votes %>%
       # Get the data into a long format
-      pivot_longer(cols = !!(first_voter):!!(last_voter), names_to = "voter",
+      pivot_longer(cols = !!(first_assessor):!!(last_assessor),
+                   names_to = "assessor",
                    values_to = "grade") %>%
       # Make sure all the grades are upper case and convert them to a numeric
       # variable using the function specified in fun_grade_to_num:
@@ -66,7 +77,7 @@ get_right_data_format <- function(individual_votes, prefix_voter = NULL,
   } else {
     long_data <- individual_votes %>%
       # Get the data into a long format
-      pivot_longer(cols = starts_with(prefix_voter), names_to = "voter",
+      pivot_longer(cols = starts_with(prefix_assessor), names_to = "assessor",
                    values_to = "grade") %>%
       # Make sure all the grades are upper case and convert them to a numeric
       # variable using the function specified in fun_grade_to_num:
@@ -87,10 +98,11 @@ get_right_data_format <- function(individual_votes, prefix_voter = NULL,
 #' This function loads and returns mock data
 #' @param panels default to 'all', for three panels. other possibilities:
 #' 'one', 'two', and 'three'.
+#' @importFrom dplyr bind_rows
 #' @export
 get_mock_data <- function(panels = "all"){
-  panel1 <- tibble(application = rep(paste0("#", 1:15), each = 5),
-                   voter = rep(paste0("v_", 1:5), 15),
+  panel1 <- tibble(proposal = rep(paste0("#", 1:15), each = 5),
+                   assessor = rep(paste0("v_", 1:5), 15),
                    grade = c(1,	1, 1,	2, 5, 1, 1,	2, 2,	6, 1,	2, 1,	3, 5,
                              1,	3, 2,	1, 5, 1, 2,	2, 3,	5, 1, 3, 1,	4, 5,
                              1,	2, 3,	4, 5, 1, 5,	2, 2,	5, 1,	3, 4,	3, 5,
@@ -99,8 +111,8 @@ get_mock_data <- function(panels = "all"){
     mutate(num_grade = 7 - .data$grade,
            panel = "p1")
 
-  panel2 <- tibble(application = rep(paste0("#", 16:30), each = 5),
-                   voter = rep(paste0("v_", 6:10), 15),
+  panel2 <- tibble(proposal = rep(paste0("#", 16:30), each = 5),
+                   assessor = rep(paste0("v_", 6:10), 15),
                    grade = c(1,	1, 1,	2, 1, 1, 2,	2, 1,	1, 1,	3, 1,	1, 2,
                              2,	2, 2,	2, 2, 2, 2,	2, 3,	3, 3,	2, 3,	3, 3,
                              3,	3, 3,	3, 3, 3, 3,	4, 4,	3, 4,	3, 3,	4, 4,
@@ -109,8 +121,8 @@ get_mock_data <- function(panels = "all"){
     mutate(num_grade = 7 - .data$grade,
            panel = "p2")
 
-  panel3 <- tibble(application = rep(paste0("#", 31:45), each = 5),
-                   voter = rep(paste0("v_", 11:15), 15),
+  panel3 <- tibble(proposal = rep(paste0("#", 31:45), each = 5),
+                   assessor = rep(paste0("v_", 11:15), 15),
                    grade = c(1,	1, 1,	1, 5, 2, 1, 3, 1, 5, 2,	3, 2,	1, 5,
                              2,	4, 1,	3, 5, 4, 2,	3, 3,	5, 3,	4, 4,	2, 5,
                              4, 3, 3,	3, 5, 2, 4,	5, 3,	5, 3, 3, 3,	5, 6,

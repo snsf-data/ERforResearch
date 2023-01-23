@@ -5,19 +5,19 @@
 \title{Helper function to define overdispersed initial values}
 \usage{
 get_inits_overdispersed_four_chains(
-  merging_sections = FALSE,
+  merging_panels = FALSE,
   ordinal_scale = FALSE,
   point_scale = NULL,
   heterogeneous_residuals = FALSE,
-  n_applications,
-  n_voters,
-  n_sections = NULL,
+  n_proposals,
+  n_assessors,
+  n_panels = NULL,
   grades = NULL,
   seed
 )
 }
 \arguments{
-\item{merging_sections}{should the sections be merged?, default is FALSE,
+\item{merging_panels}{should the sections be merged?, default is FALSE,
 e.g. a ranking is done for each section/panel separately.}
 
 \item{ordinal_scale}{are the evaluation scores on an ordinal scale?,
@@ -29,14 +29,14 @@ the scale?, default is NULL}
 \item{heterogeneous_residuals}{dummy variable informing us on whether or not
 the residuals should be heterogeneous, default = FALSE.}
 
-\item{n_applications}{number of applications / proposals considered.}
+\item{n_proposals}{number of applications / proposals considered.}
 
-\item{n_voters}{number of voters / panel members.}
+\item{n_assessors}{number of voters / panel members.}
 
-\item{n_sections}{number of sections / panels, if merged, default is NULL.}
+\item{n_panels}{number of sections / panels, if merged, default is NULL.}
 
 \item{grades}{the grades given to the proposals (the whole
-n_applications*n_voters long vector)}
+n_proposals*n_assessors long vector)}
 
 \item{seed}{seed used for the sampling}
 }

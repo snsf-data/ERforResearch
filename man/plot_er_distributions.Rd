@@ -16,7 +16,7 @@ plot_er_distributions(
   ylab = "Expected Ranks",
   number_fundable = NULL,
   outer_show = TRUE,
-  size_pt = 1.5,
+  size_pt = 1.75,
   size_outer = 0.5,
   size_inner = 2,
   alpha_inner = 0.5,
@@ -96,8 +96,8 @@ data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
 \dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
-                                 id_application = "application",
-                                 id_voter = "voter",
+                                 id_proposal = "application",
+                                 id_assessor = "voter",
                                  grade_variable = "num_grade")
 plot_er_distributions(mcmc_samples,
                       n_proposals = data_panel1 \%>\%

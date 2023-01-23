@@ -6,104 +6,161 @@
 \usage{
 plot_rankogram(
   data,
-  id_application,
-  id_voter,
+  cumulative_rank_prob = FALSE,
+  id_proposal,
+  id_assessor,
   grade_variable = "num_grade",
   path_to_jags_model = NULL,
-  n_chains = 2,
-  n_iter = 5000,
-  n_burnin = 1000,
+  n_chains = 4,
+  n_iter = 10000,
+  n_burnin = 4000,
   n_adapt = 1000,
-  id_section = NULL,
-  rank_theta_name = "rank_theta",
-  theta_name = "application_intercept",
-  voter_name = "voter_intercept",
-  tau_name = "tau_application",
-  tau_voter_name = "tau_voter",
-  tau_section_name = NULL,
+  id_panel = NULL,
+  max_iter = 1e+06,
+  theta_name = "proposal_intercept",
+  tau_name_proposal = "tau_proposal",
   sigma_name = "sigma",
-  cumulative_rank_prob = FALSE,
+  tau_name_assessor = "tau_assessor",
+  tau_name_panel = "tau_panel",
+  rank_theta_name = "rank_theta",
+  assessor_name = "assessor_intercept",
   ordinal_scale = FALSE,
-  heterogeneous_residuals = FALSE,
   point_scale = NULL,
-  inits_type = "random",
-  initial_values = NULL,
-  mcmc_samples = NULL,
+  heterogeneous_residuals = FALSE,
   seed = 1991,
-  quiet = FALSE
+  quiet = FALSE,
+  dont_bind = FALSE,
+  inits_type = "random",
+  names_variables_to_sample = NULL,
+  initial_values = NULL,
+  rhat_threshold = 1.01,
+  runjags_method = "parallel"
 )
 }
 \arguments{
-\item{data}{long data frame with all information as in the jags model
-defined below.}
-
-\item{id_application}{the name of the application variable in the data}
-
-\item{id_voter}{the name of the voter variable in the data (default = NULL)}
-
-\item{grade_variable}{the name of the outcome variable
-(default = "num_grade")}
-
-\item{path_to_jags_model}{the path to the jags txt file, if null, the
-default model is used. (default = NULL)}
-
-\item{n_chains}{number of chains for the JAGS sampler. (default = 2)}
-
-\item{n_iter}{how many iterations used in the JAGS sampler?
-(default = 5000)}
-
-\item{n_burnin}{number of burnin iterations discarded. (default = 1000)}
-
-\item{n_adapt}{number of iterations discarded for the adaptation phase.
-(default = 1000)}
-
-\item{id_section}{name of the section}
-
-\item{rank_theta_name}{the name of the rank of theta in the Bayesian model.
-(default = rank_theta")}
-
-\item{theta_name}{the name of the application identifier. (default =
-"application_intercept")}
-
-\item{voter_name}{the name of the voter intercept in the JAGS model (default
-= voter_intercept).}
-
-\item{tau_name}{name of tau in the JAGS model, being the precision of the
-random effects, in the jags model. (default = sd_application)}
-
-\item{tau_voter_name}{name of the standard error of the voter effect.
-(default = tau_voter)}
-
-\item{tau_section_name}{name of the strandard error of the section effect, if
-needed (default = NULL).}
-
-\item{sigma_name}{name of the standard error of th term (default = sigma)}
+\item{data}{data frame, in long format, with all needed variables as
+specified in the JAGS model defined in the text file with path given in
+`path_to_jags_model`.}
 
 \item{cumulative_rank_prob}{should the cumulative ranking probabilities be
 represented instead}
 
-\item{ordinal_scale}{dummy variable informing us on whether or not the
-outcome is on an ordinal scale (default = FALSE)}
+\item{id_proposal}{the name of the variable in `data` that indicates the ID
+of the evaluated proposal.}
 
-\item{heterogeneous_residuals}{dummy variable informing us on whether or not
-the residuals should be heterogeneous (in this case you have to update the
-JAGS model too, default = FALSE)}
+\item{id_assessor}{the name of the variable in `data` that indicates the ID
+of the assessor. The default `= NULL`, for the case where each assessor only
+evaluates/grades one proposal.}
+
+\item{grade_variable}{the name of the variable in `data` with the outcome
+variable, i.e. the grade or score.}
+
+\item{path_to_jags_model}{the path to text file including the JAGS model
+definition. By default `= NULL`, and the function will use a default model as
+implemented in the package; in `get_default_jags_model()`.}
+
+\item{n_chains}{the number of chains for the JAGS sampler. The default number
+of chains is set to four. This creates optimal conditions and should not be
+changed. The same parameter in `runjags::run.jags()` is called `n.chains`.}
+
+\item{n_iter}{how many iterations should be used in the JAGS sampler? This is
+the same as `sample` in the `runjags::run.jags()` function. It is set to
+`10000` by default.}
+
+\item{n_burnin}{the number of burnin iterations which will not be included in
+the adaptation phase. By default it is set to `4000` and the same parameter
+in `runjags::run.jags()` is called `burnin`.}
+
+\item{n_adapt}{the number of adaptive iterations discarded for the adaptation
+phase. By default it is set to `1000`. The same parameter in
+`runjags::run.jags()` is called `adapt`.}
+
+\item{id_panel}{the name of the variable in `data` that indicates the ID
+of the panel. The default `= NULL`, for the case where all proposals were
+evaluated in the same panel, or were each panel creates its own ranking.
+In the other scenario, a ranking would be established combining or merging
+all panels.}
+
+\item{max_iter}{the maximum number of iteration. The JAGS sample will be
+extended until convergence of the chains. To ensure that the sampler does not
+run and extend forever a maximum number of iterations per chain can be
+defined. Once this number of iterations is achieved, the sampler will not be
+further extended. By default, the function allows up to `1000000` iterations
+before stopping.}
+
+\item{theta_name}{the name of the proposal intercept in the JAGS model.
+The default that also goes with the default JAGS model build in the package
+is `proposal_intercept`.}
+
+\item{tau_name_proposal}{the name of tau in the JAGS model, being the
+standard error of the proposal effects. The default that also goes with the
+default JAGS model build in the package is `tau_proposal`.}
+
+\item{sigma_name}{name of the standard deviation of the full model. The
+default that also goes with the default JAGS model build in the package is
+`sigma`.}
+
+\item{tau_name_assessor}{name of the standard error of the assessor effect in
+the JAGS model.  The default that also goes with the default JAGS model build
+in the package is `tau_assessor`.}
+
+\item{tau_name_panel}{the name of the standard error of the panel effect, if
+needed. The default that also goes with the default JAGS model build in the
+package is `tau_panel`. This is only needed if a ranking has to be
+established combining or merging all panels, and therefore only important if
+`id_panel` is not `NULL`.}
+
+\item{rank_theta_name}{the name of the rank of theta in the JAGS model. The
+default that also goes with the default JAGS model build in the package is
+`rank_theta`.}
+
+\item{assessor_name}{the name of the assessor intercept in the JAGS model.
+The default that also goes with the default JAGS model build in the package
+is `assessor_intercept`.}
+
+\item{ordinal_scale}{dummy variable informing us on whether or not the
+outcome is on an ordinal scale. By default, we assume a numeric scale and
+this parameter is set to `FALSE`.}
 
 \item{point_scale}{integer informing us on the number of points of the
-ordinal scale; not needed for continuous scale (default = NULL)}
+ordinal scale; not needed for continuous scale. By default, we assume a
+numeric scale and do not need this information and the  parameter is set to
+`NULL`.}
 
-\item{inits_type}{type of the initial values, default is "random", but if two
-chains are used, the initial values can also be  "overdispersed"}
+\item{heterogeneous_residuals}{dummy variable informing us on whether or not
+the residuals should be heterogeneous. By default the residuals are assumed
+homogeneous and this parameter is set to `FALSE`.}
 
-\item{initial_values}{The list of initial values for the jags sampler can be
-provided directly}
-
-\item{mcmc_samples}{if the mcmc sample has already been run (default = NULL).}
-
-\item{seed}{set a seed for the JAGS model (default = 1991)}
+\item{seed}{the seed for the JAGS model (default = `1991`). This seed will
+generate the seeds for the JAGS samplers, which ensures reproducibility; see
+also Details.}
 
 \item{quiet}{if the default model is used this function generates a warning.
-if quiet = TRUE, this warning is not shown}
+if `quiet = TRUE`, the warning is not shown.}
+
+\item{dont_bind}{setting this parameter to `TRUE` will pool all the chains
+together before returning the MCMC. By default it is however set to `FALSE`.}
+
+\item{inits_type}{the type of the initial values. By default the initial
+values are randomly selected, i.e. `inits_type = "random"`.
+Alternatively, if four chains are used, the initial values can also be
+`"overdispersed"`.}
+
+\item{names_variables_to_sample}{the variables to sample can be specified,
+writin their names here, as a character-vector. The default is `NULL` and
+the default variables are used.}
+
+\item{initial_values}{The list of initial values for the jags sampler can be
+provided directly. Otherwise `get_inits_overdispersed_four_chains` for the
+overdispersed version is used, or they are randomly selected. Always using a
+seed to ensure computational reproducibility.}
+
+\item{rhat_threshold}{the threshold for rhat to decide whether or not the
+chains converged. Gelman suggested 1.1, but the smaller the better. Hence
+this functions threshold is set to `1.01` by default.}
+
+\item{runjags_method}{the method with which to call JAGS (from
+`runjags::run.jags()` with the default being set to `parallel`).}
 }
 \value{
 the result is a plot of the rankogram (or cumulative ranking
