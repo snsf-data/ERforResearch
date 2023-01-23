@@ -9,6 +9,7 @@ plot_rankogram(
   cumulative_rank_prob = FALSE,
   id_proposal,
   id_assessor,
+  mcmc_samples = NULL,
   grade_variable = "num_grade",
   path_to_jags_model = NULL,
   n_chains = 4,
@@ -51,6 +52,12 @@ of the evaluated proposal.}
 \item{id_assessor}{the name of the variable in `data` that indicates the ID
 of the assessor. The default `= NULL`, for the case where each assessor only
 evaluates/grades one proposal.}
+
+\item{mcmc_samples}{if the mcmc sample has already been run. This should be
+the direct output from the `get_mcmc_samples()`. By default, it is set to
+`NULL` and the sampler will be run. If mcmc samples are provided here, all
+further sampling information below, e.g. number of chains and
+iterations will be disgarded.}
 
 \item{grade_variable}{the name of the variable in `data` with the outcome
 variable, i.e. the grade or score.}

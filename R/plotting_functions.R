@@ -226,6 +226,11 @@ plotting_er_results <- function(er_results,
 #' @param n_burnin the number of burnin iterations which will not be included in
 #' the adaptation phase. By default it is set to `4000` and the same parameter
 #' in `runjags::run.jags()` is called `burnin`.
+#' @param mcmc_samples if the mcmc sample has already been run. This should be
+#' the direct output from the `get_mcmc_samples()`. By default, it is set to
+#' `NULL` and the sampler will be run. If mcmc samples are provided here, all
+#' further sampling information below, e.g. number of chains and
+#' iterations will be disgarded.
 #' @param max_iter the maximum number of iteration. The JAGS sample will be
 #' extended until convergence of the chains. To ensure that the sampler does not
 #' run and extend forever a maximum number of iterations per chain can be
@@ -313,6 +318,7 @@ plotting_er_results <- function(er_results,
 plot_rankogram <- function(data,
                            cumulative_rank_prob = FALSE,
                            id_proposal, id_assessor,
+                           mcmc_samples = NULL,
                            grade_variable = "num_grade",
                            path_to_jags_model = NULL,
                            n_chains = 4, n_iter = 10000,
@@ -342,7 +348,7 @@ plot_rankogram <- function(data,
     length()
 
   overall_mean <- data %>%
-    mutate(num_grade = grade_variable) %>%
+    mutate(num_grade = get(grade_variable)) %>%
     group_by(get(id_proposal)) %>%
     summarise(av = mean(.data$num_grade, na.rm = TRUE)) %>%
     dplyr::pull(.data$av) %>%
@@ -378,7 +384,7 @@ plot_rankogram <- function(data,
                                      rhat_threshold = rhat_threshold,
                                      runjags_method = runjags_method)
   } else {
-    if (length(mcmc_samples) != 8) {
+    if (length(mcmc_samples) != 7) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }
@@ -388,7 +394,7 @@ plot_rankogram <- function(data,
                                 seq_len(n_proposal), "]")
   if (is.list(mcmc_samples$samples)) {
     mcmc_samples_rank_thetas <-
-      do.call(rbind, mcmc_samples$samples)[, colnames_rank_theta]
+      do.call(rbind, mcmc_samples$samples$mcmc)[, colnames_rank_theta]
   } else {
     mcmc_samples_rank_thetas <-
       mcmc_samples$samples[, colnames_rank_theta]
@@ -476,17 +482,17 @@ plot_rankogram <- function(data,
 #'
 #' @export
 assessor_behavior_distribution <- function(get_mcmc_samples_result, n_assessors,
-                                        name_mean = "nu",
-                                        names_assessors = "voter",
-                                        title = NULL, xlim_min = -1,
-                                        xlim_max = 1,
-                                        scale = 1.75){
+                                           name_mean = "nu",
+                                           names_assessors = "voter",
+                                           title = NULL, xlim_min = -1,
+                                           xlim_max = 1,
+                                           scale = 1.75){
 
   x <- NULL
 
 
   if (is.list(get_mcmc_samples_result$samples)) {
-    samples <- do.call(rbind, get_mcmc_samples_result$samples)
+    samples <- do.call(rbind, get_mcmc_samples_result$samples$mcmc)
   } else samples <- get_mcmc_samples_result$samples
 
   assessor_behavior_colnames <- paste0(name_mean, "[", seq_len(n_assessors), "]")
@@ -609,7 +615,7 @@ plot_er_distributions <- function(get_mcmc_samples_result, n_proposals,
 
   er_colnames <- paste0(name_er_or_theta, "[", seq_len(n_proposals), "]")
   if (is.list(get_mcmc_samples_result$samples)) {
-    er_samples <- do.call(rbind, get_mcmc_samples_result$samples)[, er_colnames]
+    er_samples <- do.call(rbind, get_mcmc_samples_result$samples$mcmc)[, er_colnames]
   } else {
     er_samples <- get_mcmc_samples_result$samples[, er_colnames]
   }

@@ -177,8 +177,7 @@ is the percentile based on er.
 (n_adapt), the number of burnin iterations (n_burnin), and the final number
 of iterations actually samples (n_iter).
 
-3) the effective sample size (ess) of all relevant parameters and the
-MCMC error (mcmc_error) of the same parameters.
+3) the MCMC summary and the convergence status.
 }
 \description{
 This function computes the ER via JAGS

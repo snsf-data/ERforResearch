@@ -33,7 +33,8 @@ get_mcmc_samples(
   names_variables_to_sample = NULL,
   initial_values = NULL,
   rhat_threshold = 1.01,
-  runjags_method = "parallel"
+  runjags_method = "parallel",
+  minimal_testing = FALSE
 )
 }
 \arguments{
@@ -157,6 +158,10 @@ this functions threshold is set to `1.01` by default.}
 
 \item{runjags_method}{the method with which to call JAGS (from
 `runjags::run.jags()` with the default being set to `parallel`).}
+
+\item{minimal_testing}{should only the most important model parameters be
+tested for convergence, e.g. the ranks and the variances? By default this is
+set to `FALSE`.}
 }
 \value{
 The function returns a list with: the MCMC samples in `samples` for

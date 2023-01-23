@@ -118,8 +118,7 @@
 #' (n_adapt), the number of burnin iterations (n_burnin), and the final number
 #' of iterations actually samples (n_iter).
 #'
-#' 3) the effective sample size (ess) of all relevant parameters and the
-#' MCMC error (mcmc_error) of the same parameters.
+#' 3) the MCMC summary and the convergence status.
 #'
 #' @export
 #' @examples
@@ -241,7 +240,7 @@ get_er_from_jags <-  function(data, id_proposal,
                                      rhat_threshold = rhat_threshold,
                                      runjags_method = runjags_method)
   } else {
-    if (length(mcmc_samples) != 8) {
+    if (length(mcmc_samples) != 7) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }
@@ -251,10 +250,10 @@ get_er_from_jags <-  function(data, id_proposal,
   final_n_adapt <- mcmc_samples$n_adapt
   final_n_burnin <- mcmc_samples$n_burnin
   final_n_iter <- mcmc_samples$n_iter
-  ess <- mcmc_samples$ess
-  mcmc_error <- mcmc_samples$mcmc_error
+  mcmc_summary <- mcmc_samples$summary
+  conv_status <- mcmc_samples$conv_status
   if (is.list(mcmc_samples$samples)) {
-    mcmc_samples <- do.call(rbind, mcmc_samples$samples)
+    mcmc_samples <- do.call(rbind, mcmc_samples$samples$mcmc)
   } else mcmc_samples <- mcmc_samples$samples
 
 
@@ -315,8 +314,8 @@ get_er_from_jags <-  function(data, id_proposal,
               n_adapt = final_n_adapt,
               n_burnin = final_n_burnin,
               n_iter = final_n_iter,
-              ess = ess,
-              mcmc_error = mcmc_error))
+              mcmc_summary = mcmc_summary,
+              conv_status = conv_status))
   }
 
 
@@ -525,7 +524,7 @@ get_sucra <- function(data, id_proposal, id_assessor,
                                      rhat_threshold = rhat_threshold,
                                      runjags_method = runjags_method)
   } else {
-    if (length(mcmc_samples) != 8) {
+    if (length(mcmc_samples) != 7) {
       stop(paste0("Make sure that the object given to mcmc_samples is an ",
                   "object that was build with get_mcmc_samples()."))
     }
@@ -536,8 +535,8 @@ get_sucra <- function(data, id_proposal, id_assessor,
   final_n_burnin <- mcmc_samples$n_burnin
   final_n_iter <- mcmc_samples$n_iter
   if (is.list(mcmc_samples$samples)) {
-    mcmc_samples <- do.call(rbind, mcmc_samples$samples)
-  } else mcmc_samples <- mcmc_samples$samples
+    mcmc_samples <- do.call(rbind, mcmc_samples$samples$mcmc)
+  } else mcmc_samples <- mcmc_samples$samples$mcmc
 
   # Extract samples of ranks of the thetas:
   colnames_ranks <- paste0(rank_theta_name, "[", seq_len(n_proposal), "]")

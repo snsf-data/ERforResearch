@@ -584,6 +584,9 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' this functions threshold is set to `1.01` by default.
 #' @param runjags_method the method with which to call JAGS (from
 #' `runjags::run.jags()` with the default being set to `parallel`).
+#' @param minimal_testing should only the most important model parameters be
+#' tested for convergence, e.g. the ranks and the variances? By default this is
+#' set to `FALSE`.
 #'
 #' @import runjags
 #' @import coda
@@ -653,7 +656,8 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
                              names_variables_to_sample = NULL,
                              initial_values = NULL,
                              rhat_threshold = 1.01,
-                             runjags_method = "parallel") {
+                             runjags_method = "parallel",
+                             minimal_testing = FALSE) {
 
   ## Tests:
   #########
@@ -784,8 +788,12 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
   # Sample certain _variables_ from the model, depending on whether or not they
   # are specified.
   if (is.null(names_variables_to_sample)) {
-    variables <- c(theta_name, tau_name_proposal, tau_name_assessor,
-                   rank_theta_name, assessor_name)
+    if (minimal_testing){
+      variables <- c(tau_name_proposal, tau_name_assessor, rank_theta_name)
+    } else{
+      variables <- c(theta_name, tau_name_proposal, tau_name_assessor,
+                     rank_theta_name, assessor_name)
+    }
     if (!heterogeneous_residuals){
       variables <- c(variables, sigma_name)
     }

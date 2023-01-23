@@ -1,0 +1,36 @@
+model{
+      # Likelihood:
+      for (i in 1:n) { # i is not the proposal but the review
+          grade[i] ~ dnorm(mu[i], inv_sigma2)
+                # inv_sigma2 is precision (1 / variance)
+          mu[i] <- overall_mean + proposal_intercept[num_proposal[i]] +
+                   assessor_intercept[num_proposal[i], num_assessor[i]] +
+                   panel_intercept[num_panel[i]]
+      }
+      # Ranks: (for the expected ranks)
+      rank_theta[1:n_proposal] <- rank(-proposal_intercept[])
+      # Priors:
+      for (j in 1:n_proposal){
+        proposal_intercept[j] ~ dnorm(0, inv_tau_proposal2)
+      }
+      for (l in 1:n_assessor){
+        for(j in 1:n_proposal){
+          assessor_intercept[j, l] ~ dnorm(nu[l], inv_tau_assessor2)
+        }
+      }
+      for (l in 1:n_assessor){
+        nu[l] ~ dnorm(0, 4) # 1/(0.5^2) = 4
+      }
+      for (l in 1:n_panel){
+        panel_intercept[l] ~ dnorm(0, inv_tau_panel2)
+      }
+
+      inv_sigma2 <- pow(sigma, -2)
+      inv_tau_proposal2 <- pow(tau_proposal, -2)
+      inv_tau_assessor2 <- pow(tau_assessor, -2)
+      inv_tau_panel2 <- pow(tau_panel, -2)
+      sigma ~ dunif(10^(-6), 2)
+      tau_proposal ~ dunif(10^(-6), 2)
+      tau_assessor ~ dunif(10^(-6), 2)
+      tau_panel ~ dunif(10^(-6), 2)
+      }

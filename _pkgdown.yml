@@ -1,0 +1,5 @@
+url: https://snsf-data.github.io/ERforResearch/
+template:
+  bootstrap: 5
+  bootswatch: minty
+

@@ -1,0 +1,122 @@
+---
+title: "Point-by-Point Response Package Review"
+author: "Rachel Heyard"
+output: html_document
+---
+
+
+This text documents how I implemented the comments made by Dr. Roos on the {ERforResearch}-package, implementing the Bayesian Ranking. I also discuss and explain whenever I did not implement one of her points. Dr. Roos comments are in in italic.
+
+[23.01.2023] Note that in the meantime, I also switched from `rjags` to `runjags` (since ERforResearch\_4.0.0). Hence I updated parts of the text to take this change into account too.
+
+# Package: ERforResearch
+
+_The software used for computations in the manuscript is freely accessible online. The package ERforResearch_2.0.0 can be easily downloaded from GitHub https://github.com/snsf-data/ERforResearch and installed on a computer. Please discuss whether you want to keep ER in the name of this package. You frequently use the notion of Bayesian ranking (BR), so that your package could also be called BRforResearch instead of ERforResearch. The supplement https://snsf-data.github.io/ERpaper-online-supplement/ could be improved in several ways to better demonstrate the reproducibility of the results:_
+
+* _Currently, the code for some of the plots is missing._
+
+* _Some chunks of the code copy-pasted code produce an error, because the function here() is missing._
+
+* _Although the rankability is not discussed in detail in the manuscript, it is used in the online supplement._
+
+* _The simulation study is not provided in the supplement._
+
+**Reply:** I am very happy to read, that the installation of the package is straightforward. Dr. Roos raises a good point when suggesting to change the name to BRforResearch, which I considered. However, I feel like changing the name at this stage of the project might be to big of a hazzle. The publication referencing the package is already published as a preprint, and the paper submission is already quite far.
+
+The online supplement of the paper was updated accordingly. The code for all the plots can be looked at. The problem with the here() function has been resolved, as the dependency of ERforResearch on the package {here} has been removed. The rankability is still present in the supplement, as it is implemented in the package. However, as rankability is not discussed in the paper, I will add a reference to Lingsma (2009) in the documentation of the function. Otherwise, it will appear a bit arbitrary to the user. The simulation study is still not provided. The code for the simulated data is provided in the appendix of the manuscript, and for now, I judged that enough. However, yes, the simulation study part is therefore not reproducible.
+
+# Function: get_default_jags_model()
+
+_This function is well implemented. It gives a convenient access to the four models obtained by crossing continuous/ordinal likelihoods with homogeneous/heterogeneous variances. This function writes the code for JAGS to the default_jags_model.txt file. Although this file can contain the continuous/homogeneous model, it can also contain three other models. Remarks:_
+
+* _The connection between the four models provided by this function and the models discussed in the main manuscript is unclear. In particular, the JAGS code provided in the appendix of the main manuscript does not fit any of these models._
+
+* _JAGS models cannot provide posteriors for the parameter overall_mean. Instead, this parameter (called ψ or μ in the main manuscript) is fixed at the overall mean of grades. Please explain this issue in the main manuscript._
+
+**Reply:** Regarding the first remark, the JAGS code in the appendix, has been changed as to being the same as the one implemented in the functions in ERforResearch. Also the second remark has been implemented. It should be clear now, from the model definition that the overall_mean is not a model parameter that has to be estimated but it is simply a summary of the data.
+
+In addition, I added the model that allows for different sub-panels/sections to be merged as a default model option. The parameter subpanels was added as a Boolean variable (default is FALSE).
+
+# Function: get_mcmc_samples()
+
+_This function is well implemented. However, it uses only 2 chains, provides values of chains that are not fully reproducible, and uses an outdated criterion for \hat{R}. Therefore, its functionality could be improved in several ways._
+
+_Remarks for the manual:_
+
+* _The value of this function is a list._
+
+* _The example does not explicitly state path_to_jags_model. In this situation, it is unclear what a default model means. I assume that the default model is a continuous/homogeneous model. For a potential user, one could provide an additional example, where a non-default model is used._
+
+_Remarks for the implementation:_
+
+1. _JAGS provides 4 different random number generators to challenge the convergence of MCMC chains. To specify reproducible MCMC chains in JAGS, one needs explicit starting values of parameters, explicit values of random number generators, and separate seed values. One example of how to initiate these 4 chains in a fully reproducible way in JAGS is provided in the file review_ERforResearch_R_code.R._
+
+2. _Because \hat{R} puts the within-chain and the between-chain variability in relation to each other, the convergence of MCMC chains can be better assessed if there are 4 different chains available for computation of \hat{R}._
+
+3. _The value 1.1 of the threshold applied to \hat{R} to assess the convergence of MCMC chains is outdated. It has been shown that a lower threshold is necessary to yield reasonable estimates of target quantities (Vats and Knudson, 2021; Vehtari et al., 2021)_
+
+4. _It is not the number of iterations in MCMC chains that informs about the quality of posteriors but the effective sample size (ESS). This means that Table 6 provided in the appendix of the main manuscript is not helpful for the user without any ESS values. Note that the ESS diagnostic proposed by Vats and Knudson (2021) is available for public use in the R package stableGR._
+
+5. _Alternatively, to trace plots one could use rank plots Vehtari et al. (2021). See also mcmc_rank_hist function provided in the package bayesplot Gabry et al. (2019)._
+
+6. _I am not convinced that uniform priors U(0,2] for precisions are optimal. In the main manuscript, you refer to Gelman (2006) to justify this choice. Why? In my opinion, both Gelman (2006) and Gelman and Hill (2007) warn that uniform priors can cause unexpected posteriors. Note also that Ott et al. (2021) demonstrated that truncation imposed by a uniform prior can have an unpleasant impact on the in formativeness of posteriors._
+
+_All 4 models implemented in the ERforResearch package are challenging. Therefore, prior assumptions can be crucial for the inference. In the long term, please consider the use of other priors for the heterogeneity parameter, so that the sensitivity of ER estimates to prior assumptions can be assessed. Alternatively, you could elicit optimistic and sceptical priors for hyperparameters._
+
+**Reply:** Regarding the remarks for the manual, I updated the documentation of the function, saying that the output is a list. Also the example will be updated.
+
+Next I'll go through each of the implementation points:
+
+* 1. and 2.: I changed the default of two to four chains for the samplers. Therefore, the function name get_inits_overdispersed_tow_chains changed to get_inits_overdispersed_four_chains, with also the four different samplers in the initialization list. The reproduciblitly of the code was ensured by following the script provided with the review: For all default models the initial values were set (if overdispersed) or randomly selected based on the seed, and then fed into the sampling algorithm.
+
+* 3.: As suggested in recent literature (Vats and Knudson, 2021; Vehtari et al., 2021), I changed the threshold applied to \hat{R} to 1.01. The optimization loop was updated using `runjags::extend.jags()`. It is important to give the function a `max.iter` parameter value that is not too high, the default is set to 1’000’000. Otherwise, it will run forever.
+
+* 4.: The runjags-package provides effective sample sizes as well as Monte Carlo error.
+
+* 5.: The rank histograms are available from the `bayesplot` package. This graphical representation was added in the vignette.
+
+* 6.: TBA
+
+Additionally, the tests performed in the package on this function were extended: all possible combinations of the default model generation as now tested. Therefore, the testing also takes longer.
+
+Also the vignette needed to be updated in general.
+
+# Function: get_er_from jags
+
+_This function computes ER estimates either for an object provided for mcmc_samples or for an object obtained from running the get_mcmc_samples function again._
+
+_Remarks for the manual:_
+
+* _Describe the meaning of the variables: avg_grade, er, rank_pm, and pcer._
+
+* _Show an example when this function is applied to the mcmc_samples object._
+
+_Remarks for the function:_
+
+* _This function is based on the rankability although this notion is no more used in the revised manuscript._
+
+* _Please keep in mind that the values of different ICC are not comparable across different settings._
+
+**Reply:** Regarding the remarks on the documentation: The return object of the function is explained in detail and an example where an mcmc_samples object was provided is added. Regarding the function itself: all mentioning and computation of the rankability is deleted from the package, as this might be confusing. The comment on ICC is relevant mainly for the paper as they are not computed by and in the package.
+
+# Function: plot er distributions
+
+_This function plots the expected rank distributions with credible intervals based on an mcmc_samples object._
+
+_Remarks for the manual:_
+
+* _Provide an example how to used this function for mock data._
+
+**Reply: An example was added.**
+
+# References
+
+Gabry, J., Simpson, D., Vehtari, A., Betancourt, M., Gelman, A., 2019. Visualization in Bayesian workflow. Journal of the Royal Statistical Society, Series A 182 (2), 389–402. URL https://rss.onlinelibrary.wiley.com/doi/full/10.1111/rssa.12378
+
+Gelman, A., 2006. Prior distributions for variance parameters in hierarchical models (Comment on Article by Browne and Draper). Bayesian Analysis 1 (3), 515–534. Gelman, A., Hill, J., 2007. Data Analysis Using Regression and Multilevel/Hierarchical Models. Cambridge University Press, Cambridge.
+
+Ott, M., Plummer, M., Roos, M., 2021. How vague is vague? How informative is informative? Reference analysis for Bayesian meta-analysis. Statistics in Medicine 40 (20), 4505–4521. URL https://onlinelibrary.wiley.com/doi/10.1002/sim.9076
+
+Vats, D., Knudson, C., 2021. Revisiting the Gelman-Rubin diagnostic. Statistical Science 36 (4), 518–529. URL https://arxiv.org/abs/1812.09384
+
+Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., B ̈urkner, P., 2021. Rank-normalization, folding, and localization: An improved ̂ R for assessing convergence of MCMC (with Discussion). Bayesian Analysis 16 (2), 667–718. URL https://doi.org/10.1214/20-BA1221 
