@@ -543,6 +543,9 @@ get_default_jags_model <- function(outcome_variable = "continuous",
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
+#' @param assessor_behavior_name the name of the parameter in the JAGS model
+#' indicating the voter behavior. By default it is set to `nu` as this is the
+#' name in the default JAGS model.
 #' @param tau_name_panel the name of the standard error of the panel effect, if
 #' needed. The default that also goes with the default JAGS model build in the
 #' package is `tau_panel`. This is only needed if a ranking has to be
@@ -647,6 +650,7 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
                              tau_name_panel = "tau_panel",
                              rank_theta_name = "rank_theta",
                              assessor_name = "assessor_intercept",
+                             assessor_behavior_name = "nu",
                              ordinal_scale = FALSE,
                              point_scale = NULL,
                              heterogeneous_residuals = FALSE,
@@ -792,7 +796,7 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
       variables <- c(tau_name_proposal, tau_name_assessor, rank_theta_name)
     } else{
       variables <- c(theta_name, tau_name_proposal, tau_name_assessor,
-                     rank_theta_name, assessor_name)
+                     rank_theta_name, assessor_name, assessor_behavior_name)
     }
     if (!heterogeneous_residuals){
       variables <- c(variables, sigma_name)

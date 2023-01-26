@@ -264,6 +264,9 @@ plotting_er_results <- function(er_results,
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
+#' @param assessor_behavior_name the name of the parameter in the JAGS model
+#' indicating the voter behavior. By default it is set to `nu` as this is the
+#' name in the default JAGS model.
 #' @param tau_name_panel the name of the standard error of the panel effect, if
 #' needed. The default that also goes with the default JAGS model build in the
 #' package is `tau_panel`. This is only needed if a ranking has to be
@@ -326,6 +329,7 @@ plot_rankogram <- function(data,
                            id_panel = NULL, max_iter = 1000000,
                            theta_name = "proposal_intercept",
                            tau_name_proposal = "tau_proposal",
+                           assessor_behavior_name = "nu",
                            sigma_name = "sigma",
                            tau_name_assessor = "tau_assessor",
                            tau_name_panel = "tau_panel",
@@ -368,6 +372,8 @@ plot_rankogram <- function(data,
                                      theta_name = theta_name,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
+                                     assessor_behavior_name =
+                                       assessor_behavior_name,
                                      tau_name_proposal = tau_name_proposal,
                                      tau_name_assessor = tau_name_assessor,
                                      tau_name_panel = tau_name_panel,

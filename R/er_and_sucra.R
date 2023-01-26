@@ -65,6 +65,9 @@
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
+#' @param assessor_behavior_name the name of the parameter in the JAGS model
+#' indicating the voter behavior. By default it is set to `nu` as this is the
+#' name in the default JAGS model.
 #' @param tau_name_panel the name of the standard error of the panel effect, if
 #' needed. The default that also goes with the default JAGS model build in the
 #' package is `tau_panel`. This is only needed if a ranking has to be
@@ -151,6 +154,7 @@ get_er_from_jags <-  function(data, id_proposal,
                               id_panel = NULL,
                               theta_name = "proposal_intercept",
                               assessor_name = "assessor_intercept",
+                              assessor_behavior_name = "nu",
                               tau_name_proposal = "tau_proposal",
                               tau_name_assessor = "tau_assessor",
                               tau_name_panel = NULL,
@@ -224,6 +228,8 @@ get_er_from_jags <-  function(data, id_proposal,
                                      theta_name = theta_name,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
+                                     assessor_behavior_name =
+                                       assessor_behavior_name,
                                      tau_name_proposal = tau_name_proposal,
                                      tau_name_assessor = tau_name_assessor,
                                      tau_name_panel = tau_name_panel,
@@ -381,6 +387,9 @@ get_er_from_jags <-  function(data, id_proposal,
 #' @param assessor_name the name of the assessor intercept in the JAGS model.
 #' The default that also goes with the default JAGS model build in the package
 #' is `assessor_intercept`.
+#' @param assessor_behavior_name the name of the parameter in the JAGS model
+#' indicating the voter behavior. By default it is set to `nu` as this is the
+#' name in the default JAGS model.
 #' @param tau_name_panel the name of the standard error of the panel effect, if
 #' needed. The default that also goes with the default JAGS model build in the
 #' package is `tau_panel`. This is only needed if a ranking has to be
@@ -451,6 +460,7 @@ get_sucra <- function(data, id_proposal, id_assessor,
                       tau_name_panel = "tau_panel",
                       rank_theta_name = "rank_theta",
                       assessor_name = "assessor_intercept",
+                      assessor_behavior_name = "nu",
                       ordinal_scale = FALSE,
                       point_scale = NULL,
                       heterogeneous_residuals = FALSE,
@@ -508,6 +518,8 @@ get_sucra <- function(data, id_proposal, id_assessor,
                                      theta_name = theta_name,
                                      rank_theta_name = rank_theta_name,
                                      assessor_name = assessor_name,
+                                     assessor_behavior_name =
+                                       assessor_behavior_name,
                                      tau_name_proposal = tau_name_proposal,
                                      tau_name_assessor = tau_name_assessor,
                                      tau_name_panel = tau_name_panel,

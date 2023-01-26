@@ -18,6 +18,7 @@ get_er_from_jags(
   id_panel = NULL,
   theta_name = "proposal_intercept",
   assessor_name = "assessor_intercept",
+  assessor_behavior_name = "nu",
   tau_name_proposal = "tau_proposal",
   tau_name_assessor = "tau_assessor",
   tau_name_panel = NULL,
@@ -92,6 +93,10 @@ is `proposal_intercept`.}
 \item{assessor_name}{the name of the assessor intercept in the JAGS model.
 The default that also goes with the default JAGS model build in the package
 is `assessor_intercept`.}
+
+\item{assessor_behavior_name}{the name of the parameter in the JAGS model
+indicating the voter behavior. By default it is set to `nu` as this is the
+name in the default JAGS model.}
 
 \item{tau_name_proposal}{the name of tau in the JAGS model, being the
 standard error of the proposal effects. The default that also goes with the

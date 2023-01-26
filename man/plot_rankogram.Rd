@@ -20,6 +20,7 @@ plot_rankogram(
   max_iter = 1e+06,
   theta_name = "proposal_intercept",
   tau_name_proposal = "tau_proposal",
+  assessor_behavior_name = "nu",
   sigma_name = "sigma",
   tau_name_assessor = "tau_assessor",
   tau_name_panel = "tau_panel",
@@ -102,6 +103,10 @@ is `proposal_intercept`.}
 \item{tau_name_proposal}{the name of tau in the JAGS model, being the
 standard error of the proposal effects. The default that also goes with the
 default JAGS model build in the package is `tau_proposal`.}
+
+\item{assessor_behavior_name}{the name of the parameter in the JAGS model
+indicating the voter behavior. By default it is set to `nu` as this is the
+name in the default JAGS model.}
 
 \item{sigma_name}{name of the standard deviation of the full model. The
 default that also goes with the default JAGS model build in the package is

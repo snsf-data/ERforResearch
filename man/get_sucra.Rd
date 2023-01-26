@@ -24,6 +24,7 @@ get_sucra(
   tau_name_panel = "tau_panel",
   rank_theta_name = "rank_theta",
   assessor_name = "assessor_intercept",
+  assessor_behavior_name = "nu",
   ordinal_scale = FALSE,
   point_scale = NULL,
   heterogeneous_residuals = FALSE,
@@ -120,6 +121,10 @@ default that also goes with the default JAGS model build in the package is
 \item{assessor_name}{the name of the assessor intercept in the JAGS model.
 The default that also goes with the default JAGS model build in the package
 is `assessor_intercept`.}
+
+\item{assessor_behavior_name}{the name of the parameter in the JAGS model
+indicating the voter behavior. By default it is set to `nu` as this is the
+name in the default JAGS model.}
 
 \item{ordinal_scale}{dummy variable informing us on whether or not the
 outcome is on an ordinal scale. By default, we assume a numeric scale and
