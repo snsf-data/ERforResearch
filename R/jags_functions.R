@@ -888,33 +888,36 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
 
   ## Build the jags model
   #######################
+  runjags.options(force.summary = TRUE)
   samps1 <-
     run.jags(path_to_jags_model,
              data = data_for_jags, n.chains = n_chains, adapt = n_adapt,
              burnin = n_burnin, inits = inits, monitor = variables,
              sample = n_iter, method = runjags_method, silent.jags = TRUE)
 
+
   # Extend the jags model if needed
   counter <- 1
-  while (any(summary(samps1)[, "psrf"] > rhat_threshold) &
+  while (any(samps1$psrf$psrf[, "Point est."] > rhat_threshold) &
          (counter + 1) * n_iter <= max_iter){
     print(paste0("Extension JAGS samples number ", counter, "."))
     counter <- counter + 1
     samps1 <- extend.jags(samps1, sample = n_iter, method = runjags_method)
   }
 
+  rhats <- samps1$psrf$psrf[, "Point est."]
+
   if (dont_bind) {
     mcmc_samples <- mcmc(samps1)
   } else mcmc_samples <- mcmc(do.call(rbind, samps1$mcmc))
 
-  if (any(summary(samps1)[, "psrf"] > rhat_threshold)) {
+  if (any(rhats > rhat_threshold)) {
     print(paste0(
       "Caution: Even after extending the JAGS iterations to ",
       counter * n_iter, " the max of the Rhat values is ",
-      round(max(summary(samps1)[,"psrf"], na.rm = TRUE), 3),
+      round(max(rhats, na.rm = TRUE), 3),
       " e.g. > ", rhat_threshold, ". The problematic parameter(s) is (are): ",
-      paste0(names(summary(samps1)[,"psrf"][which(summary(samps1)[,"psrf"] >
-                                                    rhat_threshold)]),
+      paste0(names(rhats[which(rhats > rhat_threshold)]),
              collapse = ", "), "."))
   }
 
@@ -925,8 +928,7 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
               n_burnin = n_burnin,
               n_iter = n_iter * counter,
               conv_status =
-                ifelse(max(summary(samps1)[,"psrf"],
-                           na.rm = TRUE) > rhat_threshold,
+                ifelse(max(rhats, na.rm = TRUE) > rhat_threshold,
                        paste0("Problem max rhat > ", rhat_threshold),
                        paste0("Converged (with threshold set to ",
                               rhat_threshold, ")")),
