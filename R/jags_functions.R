@@ -823,7 +823,7 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
                 "base::Super-Duper", "base::Mersenne-Twister")
   if (n_chains != 4) samplers <- rep(samplers,
                                      ceiling(n_chains/4))[seq_len(n_chains)]
-  if (inits_type == "random") {
+  if (is.null(initial_values) & (inits_type == "random")) {
     # Generate random starting values if none are specified, if numeric scale of
     # the grade and potential sub-panels are not merged:
     set.seed(seed_for_inits)
@@ -872,19 +872,21 @@ get_mcmc_samples <- function(data, id_proposal, id_assessor,
                                          beta = rnorm(1, 10^(-6), .01))))
     }
   } else {
-    # If overdispersed starting values are used:
+    if (is.null(initial_values) & (inits_type != "random")) {
+      # If overdispersed starting values are used:
     inits <-
       get_inits_overdispersed_four_chains(
         merging_panels = !is.null(id_panel),
         ordinal_scale = ordinal_scale,
         point_scale = point_scale,
-        heterogeneous_residuals = heterogeneous_residuals,
+        # heterogeneous_residuals = heterogeneous_residuals,
         n_proposals = data_for_jags$n_proposal,
         n_assessors = data_for_jags$n_assessor,
         n_panels = data_for_jags$n_panel,
         grades = data_for_jags$grade,
         seed = seed)
-  }
+    } else inits <- initial_values
+    }
 
   ## Build the jags model
   #######################
