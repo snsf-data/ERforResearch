@@ -96,12 +96,13 @@ data_panel1 <- get_mock_data() \%>\%
      filter(panel == "p1")
 \dontrun{
 mcmc_samples <- get_mcmc_samples(data = data_panel1,
-                                 id_proposal = "application",
-                                 id_assessor = "voter",
-                                 grade_variable = "num_grade")
+                                 id_proposal = "proposal",
+                                 id_assessor = "assessor",
+                                 grade_variable = "num_grade",
+                                 max_iter = 10000)
 plot_er_distributions(mcmc_samples,
                       n_proposals = data_panel1 \%>\%
-                           summarise(n = n_distinct(application)) \%>\%
+                           summarise(n = n_distinct(proposal)) \%>\%
                            pull(),
                       number_fundable = 5)
                       }
